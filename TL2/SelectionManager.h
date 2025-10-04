@@ -1,7 +1,6 @@
 ﻿#pragma once
 #include "Object.h"
 #include "UEContainer.h"
-#include "Vector.h"
 
 // Forward Declarations
 class AActor;

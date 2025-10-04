@@ -1,6 +1,5 @@
 ﻿#pragma once
 #include "Object.h"
-#include "Vector.h"
 #include "AABoundingBoxComponent.h"
 class UWorld;
 class USceneComponent;
@@ -133,7 +132,6 @@ public:
 
     UWorld* World = nullptr;
     USceneComponent* RootComponent = nullptr;
-    UAABoundingBoxComponent* CollisionComponent = nullptr;
     UTextRenderComponent* TextComp = nullptr;
 
 protected:

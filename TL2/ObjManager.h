@@ -1,6 +1,5 @@
 ﻿#pragma once
 #include "UEContainer.h"
-#include "Vector.h"
 #include "Enums.h"
 
 // Raw Data

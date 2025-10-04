@@ -2,7 +2,6 @@
 #include "BVHierachy.h"
 #include "Actor.h"
 #include "AABoundingBoxComponent.h" // FBound helpers
-#include "Vector.h"
 #include <algorithm>
 #include "Frustum.h"
 #include "Picking.h" // FRay

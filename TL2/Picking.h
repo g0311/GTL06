@@ -1,5 +1,4 @@
 ﻿#pragma once
-#include "Vector.h"
 #include "InputManager.h"
 #include "UEContainer.h"
 #include "Enums.h"
@@ -11,11 +10,6 @@ class AActor;
 class ACameraActor;
 class FViewport;
 // Unreal-style simple ray type
-struct alignas(16) FRay
-{
-    FVector Origin;
-    FVector Direction; // Normalized
-};
 
 // Build A world-space ray from the current mouse position and camera/projection info.
 // - InView: view matrix (row-major, row-vector convention; built by LookAtLH)

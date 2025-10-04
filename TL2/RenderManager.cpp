@@ -17,7 +17,6 @@
 #include "BVHierachy.h"
 #include "Occlusion.h"
 #include "Frustum.h"
-#include "AABoundingBoxComponent.h"
 #include "ResourceManager.h"
 #include "RHIDevice.h"
 #include "StaticMesh.h"
@@ -391,13 +390,14 @@ void URenderManager::BuildCpuOcclusionSets(
         AStaticMeshActor* SMA = Cast<AStaticMeshActor>(Actor);
         if (!SMA) continue;
 
-        UAABoundingBoxComponent* Box = Cast<UAABoundingBoxComponent>(SMA->CollisionComponent);
-        if (!Box) continue;
+        UStaticMeshComponent* SMC = SMA->GetStaticMeshComponent();
+        if (!SMC) continue;
+        FBound Bound = SMC->GetWorldAABB();
 
         OutOccluders.emplace_back();
         FCandidateDrawable& occluder = OutOccluders.back();
         occluder.ActorIndex = Actor->UUID;
-        occluder.Bound = Box->GetWorldBound();
+        occluder.Bound = Bound;
         occluder.WorldViewProj = VP;
         occluder.WorldView = View;
         occluder.ZNear = ZNear;

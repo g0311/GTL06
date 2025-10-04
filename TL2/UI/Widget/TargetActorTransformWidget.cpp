@@ -5,7 +5,6 @@
 #include "Actor.h"
 #include "GridActor.h"
 #include "World.h"
-#include "Vector.h"
 #include "GizmoActor.h"
 #include <string>
 #include "StaticMeshActor.h"    
@@ -81,11 +80,6 @@ namespace
 		}
 
 		if (Component == Actor.GetRootComponent())
-		{
-			return true;
-		}
-
-		if (Component == Actor.CollisionComponent)
 		{
 			return true;
 		}
@@ -847,13 +841,6 @@ void UTargetActorTransformWidget::RenderWidget()
 						const FString& NewPath = Paths[SelectedMeshIdx];
 						TargetSMC->SetStaticMesh(NewPath);
 
-						if (AStaticMeshActor* SMActorOwner = Cast<AStaticMeshActor>(SelectedActor))
-						{
-							if (GetBaseNameNoExt(NewPath) == "Sphere")
-								SMActorOwner->SetCollisionComponent(EPrimitiveType::Sphere);
-							else
-								SMActorOwner->SetCollisionComponent();
-						}
 						const FString LogPath = ToUtf8(NewPath);
 						UE_LOG("Applied StaticMesh: %s", LogPath.c_str());
 					}

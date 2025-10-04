@@ -1,5 +1,4 @@
 ﻿#pragma once
-#include "Vector.h"
 #include "Enums.h"
 
 struct FVertexSimple

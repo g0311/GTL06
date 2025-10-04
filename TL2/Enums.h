@@ -2,7 +2,7 @@
 //#define UE_ENUMS_H
 #pragma once
 #include "UEContainer.h"
-//#include "Enums.h"
+#include "Struct.h"
 #include "Archive.h"
 #include <d3d11.h>
 

@@ -6,6 +6,7 @@
 #include "ResourceManager.h"
 #include "ObjManager.h"
 #include "SceneLoader.h"
+#include "VertexData.h"
 
 UStaticMeshComponent::UStaticMeshComponent()
 {
@@ -31,13 +32,13 @@ void UStaticMeshComponent::Render(URenderer* Renderer, const FMatrix& ViewMatrix
     Renderer->PrepareShader(GetMaterial()->GetShader());
     Renderer->DrawIndexedPrimitiveComponent(GetStaticMesh(), D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST, MaterailSlots);
 }
-
 void UStaticMeshComponent::SetStaticMesh(const FString& PathFileName)
 {
     if (StaticMesh != nullptr)
     {
         StaticMesh->EraseUsingComponets(this);
     }
+
 	StaticMesh = FObjManager::LoadObjStaticMesh(PathFileName);
     StaticMesh->AddUsingComponents(this);
     
@@ -53,6 +54,27 @@ void UStaticMeshComponent::SetStaticMesh(const FString& PathFileName)
         if (MaterailSlots[i].bChangedByUser == false)
         {
             MaterailSlots[i].MaterialName = GroupInfos[i].InitialMaterialName;
+        }
+    }
+
+    // === 메쉬 로컬 AABB 계산 및 저장 ===
+    if (UStaticMesh* Mesh = StaticMesh)
+    {
+        const FStaticMesh* Asset = Mesh->GetStaticMeshAsset();
+        if (Asset && !Asset->Vertices.empty())
+        {
+            FVector Min = Asset->Vertices[0].pos;
+            FVector Max = Asset->Vertices[0].pos;
+            for (const FNormalVertex& V : Asset->Vertices)
+            {
+                Min = Min.ComponentMin(V.pos);
+                Max = Max.ComponentMax(V.pos);
+            }
+            SetLocalAABB(FBound(Min, Max));
+        }
+        else
+        {
+            SetLocalAABB(FBound());
         }
     }
 }

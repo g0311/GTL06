@@ -1,7 +1,6 @@
 ﻿#pragma once
 #include <d3d11.h>
 #include <d3dcompiler.h>
-#include "Vector.h"
 enum class EComparisonFunc
 {
     Always,

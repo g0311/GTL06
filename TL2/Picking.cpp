@@ -7,7 +7,6 @@
 #include "StaticMesh.h"
 #include "CameraActor.h"
 #include "MeshLoader.h"
-#include"Vector.h"
 #include "SelectionManager.h"
 #include <cmath>
 #include <algorithm>

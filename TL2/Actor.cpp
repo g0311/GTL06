@@ -14,14 +14,9 @@ AActor::AActor()
 {
 	Name = "DefaultActor";
 	RootComponent = CreateDefaultSubobject<USceneComponent>(FName("SceneComponent"));
-	CollisionComponent = CreateDefaultSubobject<UAABoundingBoxComponent>(FName("CollisionBox"));
 	TextComp = CreateDefaultSubobject<UTextRenderComponent>("TextBox");
 
 	// TODO (동민) - 임시로 루트 컴포넌트에 붙임. 추후 계층 구조 관리 기능 구현 필요
-	if (CollisionComponent)
-	{
-		CollisionComponent->SetupAttachment(RootComponent);
-	}
 	if (TextComp)
 	{
 		TextComp->SetupAttachment(RootComponent);
@@ -382,11 +377,9 @@ void AActor::DuplicateSubObjects()
 	bIsCulled = false;
 
 	RootComponent = RootComponent->Duplicate();
-	CollisionComponent = CollisionComponent->Duplicate();
 	TextComp = TextComp->Duplicate();
 
 	RootComponent->SetOwner(this);
-	CollisionComponent->SetOwner(this);
 	TextComp->SetOwner(this);
 
 	World = nullptr; // TODO: World를 PIE World로 할당해야 함.
@@ -399,9 +392,8 @@ void AActor::DuplicateSubObjects()
 	}*/
 
 	SceneComponents[0] = RootComponent;
-	SceneComponents[1] = CollisionComponent;
-	SceneComponents[2] = TextComp;
-	for (int i = 3; i < SceneComponents.size(); ++i)
+	SceneComponents[1] = TextComp;
+	for (int i = 2; i < SceneComponents.size(); ++i)
 	{
 		SceneComponents[i] = SceneComponents[i]->Duplicate();
 		SceneComponents[i]->SetOwner(this);

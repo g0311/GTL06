@@ -1,6 +1,5 @@
 ﻿#pragma once
 #include "Widget.h"
-#include "../../Vector.h"
 #include "../../UEContainer.h"
 
 class UUIManager;

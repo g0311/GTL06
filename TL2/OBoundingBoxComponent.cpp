@@ -1,6 +1,5 @@
 ﻿#include"pch.h"
 #include "OBoundingBoxComponent.h"
-#include "Vector.h"
 
 std::vector<FVector> MakeVerticesFromFBox(const FBox& Box)
 {

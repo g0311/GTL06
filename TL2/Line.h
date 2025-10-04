@@ -1,6 +1,5 @@
 ﻿#pragma once
 #include "Object.h"
-#include "Vector.h"
 
 /**
  * ULine - Individual line data structure
