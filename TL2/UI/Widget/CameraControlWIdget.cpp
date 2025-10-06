@@ -88,8 +88,9 @@ void UCameraControlWidget::RenderWidget()
 		bSyncedOnce = true;
 	}
 
-	ImGui::TextUnformatted("Camera Transform");
-	ImGui::Spacing();
+	// 카메라 컨트롤 섹션을 접을 수 있게 만들기
+	if (ImGui::CollapsingHeader("Camera Transform", ImGuiTreeNodeFlags_DefaultOpen))
+	{
 
 	// 카메라 이동속도 표시 및 조절 (World와 동기화)
 	if (GEngine.GetDefaultWorld() && GEngine.GetDefaultWorld()->GetCameraActor())
@@ -135,14 +136,16 @@ void UCameraControlWidget::RenderWidget()
 	// Pitch 제한 (-89 ~ 89도)
 	Rotation.X = FMath::Clamp(Rotation.X, -89.0f, 89.0f);
 
-	if (RotationChanged)
-	{
-		FQuat NewRotation = FQuat::MakeFromEuler(Rotation);
-		Camera->SetActorRotation(NewRotation);
-	}
+		if (RotationChanged)
+		{
+			FQuat NewRotation = FQuat::MakeFromEuler(Rotation);
+			Camera->SetActorRotation(NewRotation);
+		}
+	} // Camera Transform 섹션 끝
 
-	ImGui::TextUnformatted("Camera Optics");
-	ImGui::Spacing();
+	// 카메라 옵틱스 섹션
+	if (ImGui::CollapsingHeader("Camera Optics", ImGuiTreeNodeFlags_DefaultOpen))
+	{
 
 	// FOV 조절
 	bool bChanged = false;
@@ -157,57 +160,72 @@ void UCameraControlWidget::RenderWidget()
 		PushToCamera();
 	}
 
-	// 리셋 버튼
-	if (ImGui::Button("Reset Optics"))
-	{
-		UiFovY = 80.0f;
-		UiNearZ = 0.1f;
-		UiFarZ = 1000.0f;
-		PushToCamera();
-	}
+		// 리셋 버튼
+		if (ImGui::Button("Reset Optics"))
+		{
+			UiFovY = 80.0f;
+			UiNearZ = 0.1f;
+			UiFarZ = 1000.0f;
+			PushToCamera();
+		}
+	} // Camera Optics 섹션 끝
 
 	ImGui::Spacing();
 	ImGui::Separator();
 
-	// 월드 정보 표시
-	ImGui::Text("World Information");
-	ImGui::Text("Actor Count: %u", WorldActorCount);
-	ImGui::Separator();
-
-	AGridActor* gridActor = UIManager->GetWorld()->GetGridActor();
-	if (gridActor)
+	// 월드 정보 섹션
+	if (ImGui::CollapsingHeader("World Information"))
 	{
-		float currentLineSize = gridActor->GetLineSize();
-		if (ImGui::DragFloat("Grid Spacing", &currentLineSize, 0.1f, 0.1f, 1000.0f))
+		ImGui::Text("Actor Count: %u", WorldActorCount);
+
+		
+		AGridActor* gridActor = UIManager->GetWorld()->GetGridActor();
+		if (gridActor)
 		{
-			gridActor->SetLineSize(currentLineSize);
-			EditorINI["GridSpacing"] = std::to_string(currentLineSize);
+			float currentLineSize = gridActor->GetLineSize();
+			if (ImGui::DragFloat("Grid Spacing", &currentLineSize, 0.1f, 0.1f, 1000.0f))
+			{
+				gridActor->SetLineSize(currentLineSize);
+				EditorINI["GridSpacing"] = std::to_string(currentLineSize);
+			}
 		}
-	}
-	else
-	{
-		ImGui::Text("GridActor not found in the world.");
-	}
-
-	ImGui::Text("Transform Editor");
-
-	SelectedActor = GetCurrentSelectedActor();
-
-
-	// 기즈모 스페이스 모드 선택
-	if (GizmoActor)
-	{
-		const char* spaceItems[] = { "World", "Local" };
-		int currentSpaceIndex = static_cast<int>(CurrentGizmoSpace);
-
-		if (ImGui::Combo("Gizmo Space", &currentSpaceIndex, spaceItems, IM_ARRAYSIZE(spaceItems)))
+		else
 		{
-			CurrentGizmoSpace = static_cast<EGizmoSpace>(currentSpaceIndex);
-
-			GizmoActor->SetSpaceWorldMatrix(CurrentGizmoSpace, SelectedActor);
+			ImGui::Text("GridActor not found in the world.");
 		}
-		ImGui::Separator();
-	}
+	} // World Information 섹션 끝
+
+	// Transform Editor 섹션
+	if (ImGui::CollapsingHeader("Transform Editor"))
+	{
+		SelectedActor = GetCurrentSelectedActor();
+
+		if (SelectedActor)
+		{
+			ImGui::Text("Selected: %s", SelectedActor->GetName().ToString().c_str());
+		}
+		else
+		{
+			ImGui::Text("No actor selected");
+		}
+
+		// 기즈모 스페이스 모드 선택
+		if (GizmoActor)
+		{
+			const char* spaceItems[] = { "World", "Local" };
+			int currentSpaceIndex = static_cast<int>(CurrentGizmoSpace);
+
+			if (ImGui::Combo("Gizmo Space", &currentSpaceIndex, spaceItems, IM_ARRAYSIZE(spaceItems)))
+			{
+				CurrentGizmoSpace = static_cast<EGizmoSpace>(currentSpaceIndex);
+				GizmoActor->SetSpaceWorldMatrix(CurrentGizmoSpace, SelectedActor);
+			}
+		}
+		else
+		{
+			ImGui::Text("Gizmo not available");
+		}
+	} // Transform Editor 섹션 끝
 
 }
 

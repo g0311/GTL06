@@ -394,7 +394,6 @@ void AActor::DuplicateSubObjects()
 	bIsPicked = false;
 	bCanEverTick = true;
 	bHiddenInGame = false;
-	bIsCulled = false;
 
 	RootComponent = RootComponent->Duplicate();
 	TextComp = TextComp->Duplicate();

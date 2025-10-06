@@ -1,7 +1,7 @@
 ﻿#include "pch.h"
 #include "SceneWindow.h"
 #include "../Widget/SceneManagerWidget.h"
-#include "../Widget/ShowFlagWidget.h"
+// ShowFlagWidget removed - moved to MenuBar View menu
 #include"RenderViewportSwitcherWidget.h"
 
 //// UE_LOG 대체 매크로
@@ -35,17 +35,7 @@ USceneWindow::USceneWindow()
 		UE_LOG("SceneWindow: Failed to create SceneManagerWidget");
 	}
 	
-	// Add Show Flag Widget for rendering control
-	UShowFlagWidget* ShowFlagWidget = NewObject<UShowFlagWidget>();
-	if (ShowFlagWidget)
-	{
-		AddWidget(ShowFlagWidget);
-		UE_LOG("SceneWindow: ShowFlagWidget created successfully");
-	}
-	else
-	{
-		UE_LOG("SceneWindow: Failed to create ShowFlagWidget");
-	}
+	// ShowFlag controls moved to MenuBar View menu for better accessibility
 	
 	// Transform and termination widgets moved to Control Panel for better UX
 }

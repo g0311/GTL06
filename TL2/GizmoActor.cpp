@@ -226,7 +226,6 @@ void AGizmoActor::SetSpaceWorldMatrix(EGizmoSpace NewSpace, AActor* PickedActor)
 		if (RotateY) RotateY->SetRelativeRotation(TargetRot * FQuat::MakeFromEuler(FVector(90, 0, 0)));
 		if (RotateZ) RotateZ->SetRelativeRotation(TargetRot * FQuat::MakeFromEuler(FVector(0, 0, 0)));
 	}
-
 }
 
 

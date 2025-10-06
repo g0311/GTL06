@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "UI/Widget/Widget.h"
 class USlateManager;
 
@@ -23,25 +23,26 @@ public:
     // 오너 설정
     void SetOwner(USlateManager* InOwner) { Owner = InOwner; }
 
-    // 선택: 액션 콜백 핸들러 (설정하면 내부 기본 동작 대신 콜백 호출)
+    // 선택: File 액션 콜백 핸들러 (단순화된 UI에서는 File만 사용)
     void SetFileActionHandler(std::function<void(const char*)> Fn) { FileAction = std::move(Fn); }
-    void SetEditActionHandler(std::function<void(const char*)> Fn) { EditAction = std::move(Fn); }
-    void SetWindowActionHandler(std::function<void(const char*)> Fn) { WindowAction = std::move(Fn); }
-    void SetHelpActionHandler(std::function<void(const char*)> Fn) { HelpAction = std::move(Fn); }
 
 private:
-    // 기본 동작(콜백 미설정 시 호출)
+    // File 메뉴 동작
     void OnFileMenuAction(const char* action);
-    void OnEditMenuAction(const char* action);
-    void OnWindowMenuAction(const char* action);
-    void OnHelpMenuAction(const char* action);
+    
+    // ShowFlag 메뉴 렌더링
+    void RenderShowFlagsMenu();
+    void RenderShowFlagMenuItem(const char* Label, uint64_t Flag);
+    
+    
+    // 파일 다이얼로그 헬퍼
+    std::string ShowLoadFileDialog();
+    std::string ShowSaveFileDialog();
 
 private:
     USlateManager* Owner = nullptr;
 
-    // 외부 주도 액션을 위한 선택적 콜백
+    // File 액션을 위한 선택적 콜백
     std::function<void(const char*)> FileAction;
-    std::function<void(const char*)> EditAction;
-    std::function<void(const char*)> WindowAction;
-    std::function<void(const char*)> HelpAction;
+    
 };

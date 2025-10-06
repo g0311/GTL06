@@ -3,6 +3,13 @@
 #include "USlateManager.h"
 #include "ImGui/imgui.h"
 #include <EditorEngine.h>
+#include "UI/UIManager.h"
+#include "World.h"
+#include "RenderSettings.h"
+#include "Level.h"
+#include "CameraActor.h"
+#include <commdlg.h>  // Windows File Dialog
+#include <shlobj.h>   // Shell API
 
 // 필요하다면 외부 free 함수 사용 가능 (동일 TU가 아닐 경우 extern 선언이 필요)
 // extern void LoadSplitterConfig(SSplitter* RootSplitter);
@@ -10,7 +17,10 @@
 UMenuBarWidget::UMenuBarWidget() {}
 UMenuBarWidget::UMenuBarWidget(USlateManager* InOwner) : Owner(InOwner) {}
 
-void UMenuBarWidget::Initialize() {}
+void UMenuBarWidget::Initialize() 
+{
+	// 메뉴바 초기화
+}
 void UMenuBarWidget::Update() {}
 
 void UMenuBarWidget::RenderWidget()
@@ -24,10 +34,10 @@ void UMenuBarWidget::RenderWidget()
         if (ImGui::MenuItem("New Scene", "Ctrl+N"))
             (FileAction ? FileAction : [this](auto a) { OnFileMenuAction(a); })("new_scene");
 
-        if (ImGui::MenuItem("Open Scene", "Ctrl+O"))
-            (FileAction ? FileAction : [this](auto a) { OnFileMenuAction(a); })("open_scene");
-
         ImGui::Separator();
+
+        if (ImGui::MenuItem("Load Scene", "Ctrl+O"))
+            (FileAction ? FileAction : [this](auto a) { OnFileMenuAction(a); })("load_scene");
 
         if (ImGui::MenuItem("Save Scene", "Ctrl+S"))
             (FileAction ? FileAction : [this](auto a) { OnFileMenuAction(a); })("save_scene");
@@ -37,113 +47,24 @@ void UMenuBarWidget::RenderWidget()
 
         ImGui::Separator();
 
-        if (ImGui::BeginMenu("Recent Scenes"))
-        {
-            ImGui::MenuItem("Scene1.scene");
-            ImGui::MenuItem("Scene2.scene");
-            ImGui::MenuItem("Scene3.scene");
-            ImGui::EndMenu();
-        }
-
-        ImGui::Separator();
-
         if (ImGui::MenuItem("Exit", "Alt+F4"))
             (FileAction ? FileAction : [this](auto a) { OnFileMenuAction(a); })("exit");
 
         ImGui::EndMenu();
     }
 
-    // ===== Edit =====
-    if (ImGui::BeginMenu("Edit"))
+    // Edit menu removed - not implemented yet
+
+    // Window menu removed - layout management not needed in simplified UI
+
+    // ===== View =====
+    if (ImGui::BeginMenu("View"))
     {
-        if (ImGui::MenuItem("Undo", "Ctrl+Z"))
-            (EditAction ? EditAction : [this](auto a) { OnEditMenuAction(a); })("undo");
-        if (ImGui::MenuItem("Redo", "Ctrl+Y"))
-            (EditAction ? EditAction : [this](auto a) { OnEditMenuAction(a); })("redo");
-
-        ImGui::Separator();
-
-        if (ImGui::MenuItem("Cut", "Ctrl+X"))
-            (EditAction ? EditAction : [this](auto a) { OnEditMenuAction(a); })("cut");
-        if (ImGui::MenuItem("Copy", "Ctrl+C"))
-            (EditAction ? EditAction : [this](auto a) { OnEditMenuAction(a); })("copy");
-        if (ImGui::MenuItem("Paste", "Ctrl+V"))
-            (EditAction ? EditAction : [this](auto a) { OnEditMenuAction(a); })("paste");
-        if (ImGui::MenuItem("Duplicate", "Ctrl+D"))
-            (EditAction ? EditAction : [this](auto a) { OnEditMenuAction(a); })("duplicate");
-        if (ImGui::MenuItem("Delete", "Delete"))
-            (EditAction ? EditAction : [this](auto a) { OnEditMenuAction(a); })("delete");
-
-        ImGui::Separator();
-
-        if (ImGui::MenuItem("Select All", "Ctrl+A"))
-            (EditAction ? EditAction : [this](auto a) { OnEditMenuAction(a); })("select_all");
-
-        ImGui::Separator();
-
-        if (ImGui::MenuItem("Project Settings"))
-            (EditAction ? EditAction : [this](auto a) { OnEditMenuAction(a); })("project_settings");
-
+        RenderShowFlagsMenu();
         ImGui::EndMenu();
     }
 
-    // ===== Window =====
-    if (ImGui::BeginMenu("Window"))
-    {
-        if (ImGui::BeginMenu("Viewport Layout"))
-        {
-            if (ImGui::MenuItem("Single Viewport"))
-                (WindowAction ? WindowAction : [this](auto a) { OnWindowMenuAction(a); })("single_viewport");
-
-            if (ImGui::MenuItem("Four Split"))
-                (WindowAction ? WindowAction : [this](auto a) { OnWindowMenuAction(a); })("four_split");
-
-            ImGui::EndMenu();
-        }
-
-        ImGui::Separator();
-
-        if (ImGui::MenuItem("Details Panel"))
-            (WindowAction ? WindowAction : [this](auto a) { OnWindowMenuAction(a); })("details_panel");
-
-        if (ImGui::MenuItem("Scene Manager"))
-            (WindowAction ? WindowAction : [this](auto a) { OnWindowMenuAction(a); })("scene_manager");
-
-        if (ImGui::MenuItem("Console"))
-            (WindowAction ? WindowAction : [this](auto a) { OnWindowMenuAction(a); })("console");
-
-        if (ImGui::MenuItem("Control Panel"))
-            (WindowAction ? WindowAction : [this](auto a) { OnWindowMenuAction(a); })("control_panel");
-
-        ImGui::Separator();
-
-        if (ImGui::MenuItem("Reset Layout"))
-            (WindowAction ? WindowAction : [this](auto a) { OnWindowMenuAction(a); })("reset_layout");
-
-        ImGui::EndMenu();
-    }
-
-    // ===== Help =====
-    if (ImGui::BeginMenu("Help"))
-    {
-        if (ImGui::MenuItem("Documentation"))
-            (HelpAction ? HelpAction : [this](auto a) { OnHelpMenuAction(a); })("documentation");
-
-        if (ImGui::MenuItem("Tutorials"))
-            (HelpAction ? HelpAction : [this](auto a) { OnHelpMenuAction(a); })("tutorials");
-
-        ImGui::Separator();
-
-        if (ImGui::MenuItem("Keyboard Shortcuts"))
-            (HelpAction ? HelpAction : [this](auto a) { OnHelpMenuAction(a); })("shortcuts");
-
-        ImGui::Separator();
-
-        if (ImGui::MenuItem("About"))
-            (HelpAction ? HelpAction : [this](auto a) { OnHelpMenuAction(a); })("about");
-
-        ImGui::EndMenu();
-    }
+    // Help menu removed - documentation not implemented
 
     // ===== PIE Controls (centered) =====
     {
@@ -189,27 +110,113 @@ void UMenuBarWidget::RenderWidget()
     ImGui::EndMainMenuBar();
 }
 
+
 // ---------------- 기본 동작 ----------------
 
 void UMenuBarWidget::OnFileMenuAction(const char* action)
 {
     UE_LOG("File menu action: %s", action);
+    
+    UWorld* World = UUIManager::GetInstance().GetWorld();
+    if (!World) 
+    {
+        UE_LOG("No active world found");
+        return;
+    }
 
     if (strcmp(action, "new_scene") == 0)
     {
-        // TODO: 새 씬 생성
+        // 새 씬 생성
+        World->CreateLevel();
+        UE_LOG("New scene created");
     }
-    else if (strcmp(action, "open_scene") == 0)
+    else if (strcmp(action, "load_scene") == 0)
     {
-        // TODO: 씬 열기
+        // 씬 로드
+        std::string filePath = ShowLoadFileDialog();
+        if (!filePath.empty())
+        {
+            try 
+            {
+                // Extract scene name from file path
+                FString SceneName = filePath;
+                size_t LastSlash = SceneName.find_last_of("\\/");
+                if (LastSlash != std::string::npos)
+                {
+                    SceneName = SceneName.substr(LastSlash + 1);
+                }
+                size_t LastDot = SceneName.find_last_of(".");
+                if (LastDot != std::string::npos)
+                {
+                    SceneName = SceneName.substr(0, LastDot);
+                }
+                
+                FLoadedLevel loadedLevel = ULevelService::LoadLevel(SceneName);
+                World->SetLevel(std::move(loadedLevel.Level));
+                
+                // Apply camera data if available
+                if (ACameraActor* CamActor = World->GetCameraActor())
+                {
+                    FPerspectiveCameraData& CamData = loadedLevel.Camera;
+                    CamActor->SetActorLocation(CamData.Location);
+                    CamActor->SetActorRotation(FQuat::MakeFromEuler(CamData.Rotation));
+                }
+                
+                UE_LOG("Scene loaded from: %s", SceneName.c_str());
+            }
+            catch (const std::exception& e)
+            {
+                UE_LOG("Error loading scene: %s", e.what());
+            }
+        }
     }
     else if (strcmp(action, "save_scene") == 0)
     {
-        // TODO: 저장
+        // 씬 저장 (기본 경로)
+        if (World->GetLevel())
+        {
+            try
+            {
+                ACameraActor* CamActor = World->GetCameraActor();
+                ULevelService::SaveLevel(World->GetLevel(), CamActor, "default_scene");
+                UE_LOG("Scene saved to default location");
+            }
+            catch (const std::exception& e)
+            {
+                UE_LOG("Error saving scene: %s", e.what());
+            }
+        }
     }
     else if (strcmp(action, "save_scene_as") == 0)
     {
-        // TODO: 다른 이름으로 저장
+        // 다른 이름으로 저장
+        std::string filePath = ShowSaveFileDialog();
+        if (!filePath.empty() && World->GetLevel())
+        {
+            try
+            {
+                // Extract scene name from file path
+                FString SceneName = filePath;
+                size_t LastSlash = SceneName.find_last_of("\\/");
+                if (LastSlash != std::string::npos)
+                {
+                    SceneName = SceneName.substr(LastSlash + 1);
+                }
+                size_t LastDot = SceneName.find_last_of(".");
+                if (LastDot != std::string::npos)
+                {
+                    SceneName = SceneName.substr(0, LastDot);
+                }
+                
+                ACameraActor* CamActor = World->GetCameraActor();
+                ULevelService::SaveLevel(World->GetLevel(), CamActor, SceneName);
+                UE_LOG("Scene saved as: %s", SceneName.c_str());
+            }
+            catch (const std::exception& e)
+            {
+                UE_LOG("Error saving scene: %s", e.what());
+            }
+        }
     }
     else if (strcmp(action, "exit") == 0)
     {
@@ -217,44 +224,196 @@ void UMenuBarWidget::OnFileMenuAction(const char* action)
     }
 }
 
-void UMenuBarWidget::OnEditMenuAction(const char* action)
+// Unused menu action methods removed - only File menu is active
+
+void UMenuBarWidget::RenderShowFlagsMenu()
 {
-    UE_LOG("Edit menu action: %s", action);
-    // TODO: Undo/Redo/Cut/Copy/Paste 등 구현 혹은 외부 콜백으로 처리
+    UWorld* World = UUIManager::GetInstance().GetWorld();
+    if (!World) return;
+    
+    // === 기본 렌더링 ===
+    if (ImGui::BeginMenu("렌더링"))
+    {
+        RenderShowFlagMenuItem("프리미티브 (Master)", static_cast<uint64_t>(EEngineShowFlags::SF_Primitives));
+        ImGui::Separator();
+        RenderShowFlagMenuItem("스태틱 메시", static_cast<uint64_t>(EEngineShowFlags::SF_StaticMeshes));
+        RenderShowFlagMenuItem("텍스트", static_cast<uint64_t>(EEngineShowFlags::SF_Text));
+        RenderShowFlagMenuItem("빌보드", static_cast<uint64_t>(EEngineShowFlags::SF_Billboard));
+        RenderShowFlagMenuItem("그리드", static_cast<uint64_t>(EEngineShowFlags::SF_Grid));
+        ImGui::Separator();
+        RenderShowFlagMenuItem("와이어프레임", static_cast<uint64_t>(EEngineShowFlags::SF_Wireframe));
+        RenderShowFlagMenuItem("라이팅", static_cast<uint64_t>(EEngineShowFlags::SF_Lighting));
+        ImGui::EndMenu();
+    }
+    
+    // === 디버그 & 비주얼라이제이션 ===
+    if (ImGui::BeginMenu("디버그"))
+    {
+        RenderShowFlagMenuItem("바운딩 박스", static_cast<uint64_t>(EEngineShowFlags::SF_BoundingBoxes));
+        ImGui::Separator();
+        
+        // 공간 분할 디버그 (상호 배타)
+        bool bvh = World->GetRenderSettings().IsShowFlagEnabled(EEngineShowFlags::SF_BVHDebug);
+        bool oct = World->GetRenderSettings().IsShowFlagEnabled(EEngineShowFlags::SF_OctreeDebug);
+        
+        if (ImGui::MenuItem("BVH 디버그", nullptr, bvh))
+        {
+            if (bvh)
+            {
+                World->GetRenderSettings().DisableShowFlag(EEngineShowFlags::SF_BVHDebug);
+            }
+            else
+            {
+                World->GetRenderSettings().EnableShowFlag(EEngineShowFlags::SF_BVHDebug);
+                World->GetRenderSettings().DisableShowFlag(EEngineShowFlags::SF_OctreeDebug);
+            }
+        }
+        
+        if (ImGui::MenuItem("Octree 디버그", nullptr, oct))
+        {
+            if (oct)
+            {
+                World->GetRenderSettings().DisableShowFlag(EEngineShowFlags::SF_OctreeDebug);
+            }
+            else
+            {
+                World->GetRenderSettings().EnableShowFlag(EEngineShowFlags::SF_OctreeDebug);
+                World->GetRenderSettings().DisableShowFlag(EEngineShowFlags::SF_BVHDebug);
+            }
+        }
+        
+        ImGui::Separator();
+        RenderShowFlagMenuItem("컶링 통계", static_cast<uint64_t>(EEngineShowFlags::SF_Culling));
+        ImGui::EndMenu();
+    }
+    
+    ImGui::Separator();
+    
+    // === 프리셋 ===
+    if (ImGui::BeginMenu("프리셋"))
+    {
+        if (ImGui::MenuItem("게임 뷰"))
+        {
+            World->GetRenderSettings().EnableShowFlag(EEngineShowFlags::SF_Primitives);
+            World->GetRenderSettings().EnableShowFlag(EEngineShowFlags::SF_StaticMeshes);
+            World->GetRenderSettings().EnableShowFlag(EEngineShowFlags::SF_Lighting);
+            World->GetRenderSettings().DisableShowFlag(EEngineShowFlags::SF_Text);
+            World->GetRenderSettings().DisableShowFlag(EEngineShowFlags::SF_BoundingBoxes);
+            World->GetRenderSettings().DisableShowFlag(EEngineShowFlags::SF_Grid);
+            World->GetRenderSettings().DisableShowFlag(EEngineShowFlags::SF_Wireframe);
+            World->GetRenderSettings().DisableShowFlag(EEngineShowFlags::SF_OctreeDebug);
+            World->GetRenderSettings().DisableShowFlag(EEngineShowFlags::SF_BVHDebug);
+        }
+        
+        if (ImGui::MenuItem("에디터 뷰"))
+        {
+            World->GetRenderSettings().SetShowFlags(EEngineShowFlags::SF_DefaultEnabled);
+            World->GetRenderSettings().EnableShowFlag(EEngineShowFlags::SF_Text);
+        }
+        
+        if (ImGui::MenuItem("와이어프레임 뷰"))
+        {
+            World->GetRenderSettings().EnableShowFlag(EEngineShowFlags::SF_Primitives);
+            World->GetRenderSettings().EnableShowFlag(EEngineShowFlags::SF_StaticMeshes);
+            World->GetRenderSettings().EnableShowFlag(EEngineShowFlags::SF_Wireframe);
+            World->GetRenderSettings().DisableShowFlag(EEngineShowFlags::SF_Lighting);
+        }
+        
+        ImGui::Separator();
+        
+        if (ImGui::MenuItem("모두 표시"))
+        {
+            World->GetRenderSettings().SetShowFlags(EEngineShowFlags::SF_All);
+        }
+        
+        if (ImGui::MenuItem("모두 숨김"))
+        {
+            World->GetRenderSettings().SetShowFlags(EEngineShowFlags::None);
+        }
+        
+        if (ImGui::MenuItem("기본값 복원"))
+        {
+            World->GetRenderSettings().SetShowFlags(EEngineShowFlags::SF_DefaultEnabled);
+        }
+        
+        ImGui::EndMenu();
+    }
 }
 
-void UMenuBarWidget::OnWindowMenuAction(const char* action)
+void UMenuBarWidget::RenderShowFlagMenuItem(const char* Label, uint64_t Flag)
 {
-    UE_LOG("Window menu action: %s", action);
-
-    if (!Owner) return;
-
-    if (strcmp(action, "single_viewport") == 0)
+    UWorld* World = UUIManager::GetInstance().GetWorld();
+    if (!World) return;
+    
+    EEngineShowFlags ShowFlag = static_cast<EEngineShowFlags>(Flag);
+    bool bEnabled = World->GetRenderSettings().IsShowFlagEnabled(ShowFlag);
+    
+    if (ImGui::MenuItem(Label, nullptr, bEnabled))
     {
-        Owner->SwitchLayout(EViewportLayoutMode::SingleMain);
-    }
-    else if (strcmp(action, "four_split") == 0)
-    {
-        Owner->SwitchLayout(EViewportLayoutMode::FourSplit);
-    }
-    else if (strcmp(action, "reset_layout") == 0)
-    {
-        // 추천: SMultiViewportWindow에 ResetLayout() 같은 래퍼 함수 하나 만들어 호출
-        // Owner->ResetLayout();
-
-        // 임시: 이미 공개 범위라면 외부 free 함수를 사용해도 됨
-        // LoadSplitterConfig(Owner->GetRootSplitter());  // GetRootSplitter() 제공 필요
-    }
-    else
-    {
-        // "details_panel", "scene_manager", "console", "control_panel" 토글은
-        // Owner 쪽에 Show/Hide API를 추가하여 호출하는 걸 권장
-        // 예: Owner->ToggleDetailsPanel();
+        if (bEnabled)
+        {
+            World->GetRenderSettings().DisableShowFlag(ShowFlag);
+        }
+        else
+        {
+            World->GetRenderSettings().EnableShowFlag(ShowFlag);
+        }
     }
 }
 
-void UMenuBarWidget::OnHelpMenuAction(const char* action)
+std::string UMenuBarWidget::ShowLoadFileDialog()
 {
-    UE_LOG("Help menu action: %s", action);
-    // TODO: 문서/튜토리얼/단축키/어바웃 처리
+    OPENFILENAMEW ofn;
+    WCHAR szFile[260] = { 0 };
+    
+    ZeroMemory(&ofn, sizeof(ofn));
+    ofn.lStructSize = sizeof(ofn);
+    ofn.hwndOwner = GetActiveWindow();
+    ofn.lpstrFile = szFile;
+    ofn.nMaxFile = sizeof(szFile) / sizeof(WCHAR);
+    ofn.lpstrFilter = L"Scene Files\0*.scene\0All Files\0*.*\0";
+    ofn.nFilterIndex = 1;
+    ofn.lpstrFileTitle = NULL;
+    ofn.nMaxFileTitle = 0;
+    ofn.lpstrInitialDir = L"Scene";
+    ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR;
+    
+    if (GetOpenFileNameW(&ofn))
+    {
+        // Convert WCHAR to std::string
+        std::wstring wstr(szFile);
+        std::string str(wstr.begin(), wstr.end());
+        return str;
+    }
+    
+    return "";
+}
+
+std::string UMenuBarWidget::ShowSaveFileDialog()
+{
+    OPENFILENAMEW ofn;
+    WCHAR szFile[260] = { 0 };
+    
+    ZeroMemory(&ofn, sizeof(ofn));
+    ofn.lStructSize = sizeof(ofn);
+    ofn.hwndOwner = GetActiveWindow();
+    ofn.lpstrFile = szFile;
+    ofn.nMaxFile = sizeof(szFile) / sizeof(WCHAR);
+    ofn.lpstrFilter = L"Scene Files\0*.scene\0All Files\0*.*\0";
+    ofn.nFilterIndex = 1;
+    ofn.lpstrFileTitle = NULL;
+    ofn.nMaxFileTitle = 0;
+    ofn.lpstrInitialDir = L"Scene";
+    ofn.lpstrDefExt = L"scene";
+    ofn.Flags = OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT | OFN_NOCHANGEDIR;
+    
+    if (GetSaveFileNameW(&ofn))
+    {
+        // Convert WCHAR to std::string
+        std::wstring wstr(szFile);
+        std::string str(wstr.begin(), wstr.end());
+        return str;
+    }
+    
+    return "";
 }

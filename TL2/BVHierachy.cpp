@@ -161,10 +161,7 @@ void FBVHierachy::QueryFrustum(const Frustum& InFrustum)
     {
         for (UPrimitiveComponent* Prim : PrimArray)
         {
-            if (Prim && PrimLastBounds.find(Prim) != PrimLastBounds.end())
-            {
-                if (AActor* Owner = Prim->GetOwner()) Owner->SetCulled(false);
-            }
+            Prim->SetCulled(false);
         }
         return;
     }
@@ -187,7 +184,7 @@ void FBVHierachy::QueryFrustum(const Frustum& InFrustum)
                 const FBound Box = Cached ? *Cached : Prim->GetWorldAABB();
                 if (IsAABBVisible(InFrustum, Box))
                 {
-                    if (AActor* Owner = Prim->GetOwner()) Owner->SetCulled(false);
+                    Prim->SetCulled(false);
                 }
             }
             continue;

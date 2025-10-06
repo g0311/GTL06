@@ -33,6 +33,12 @@ void UPrimitiveComponent::Serialize(bool bIsLoading, FPrimitiveData& InOut)
     }
 }
 
+void UPrimitiveComponent::Render(URenderer* Renderer, const FMatrix& View, const FMatrix& Proj)
+{
+    if (!IsActive() || bIsCulled)
+        return;
+}
+
 // 월드 AABB 계산 유틸 (Arvo)
 FVector UPrimitiveComponent::ComputeWorldExtentsArvo(const FVector& E, const FMatrix& M) const
 {

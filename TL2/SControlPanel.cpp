@@ -26,11 +26,28 @@ void SControlPanel::OnRender()
 
     if (ImGui::Begin("Control", nullptr, flags))
     {
-        if (SceneWindow) {
-            SceneWindow->RenderWidget();
+        // 탭 바 렌더링
+        if (ImGui::BeginTabBar("ControlTabs", ImGuiTabBarFlags_None))
+        {
+            // 시스템 탭 (Scene Manager + FPS)
+            if (ImGui::BeginTabItem("시스템"))
+            {
+                if (SceneWindow) {
+                    SceneWindow->RenderWidget();
+                }
+                ImGui::EndTabItem();
+            }
+            
+            // 컨트롤 탭 (Camera, Spawn, Actor Management)
+            if (ImGui::BeginTabItem("컨트롤"))
+            {
+                if (ControlPanelWidget)
+                    ControlPanelWidget->RenderWidget();
+                ImGui::EndTabItem();
+            }
+            
+            ImGui::EndTabBar();
         }
-        if (ControlPanelWidget)
-            ControlPanelWidget->RenderWidget();
     }
     ImGui::End();
 	

@@ -4,6 +4,10 @@
 class UCamera;
 class ULevelManager;
 class AActor;
+class UFPSWidget;
+class UActorTerminationWidget;
+class UPrimitiveSpawnWidget;
+class UCameraControlWidget;
 
 /**
  * @brief 전반적인 컨트롤을 담당하는 Panel Window

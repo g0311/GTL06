@@ -5,13 +5,13 @@
 
 class URenderer;
 
-class ULineComponent : public UPrimitiveComponent
+class UGridComponent : public UPrimitiveComponent
 {
 public:
-    DECLARE_CLASS(ULineComponent, UPrimitiveComponent)
+    DECLARE_CLASS(UGridComponent, UPrimitiveComponent)
     
-    ULineComponent();
-    virtual ~ULineComponent() override;
+    UGridComponent();
+    virtual ~UGridComponent() override;
 
 public:
     // Line management
@@ -34,7 +34,7 @@ public:
 
     // ───── 복사 관련 ────────────────────────────
     void DuplicateSubObjects() override;
-    DECLARE_DUPLICATE(ULineComponent)
+    DECLARE_DUPLICATE(UGridComponent)
 
 private:
     TArray<ULine*> Lines;

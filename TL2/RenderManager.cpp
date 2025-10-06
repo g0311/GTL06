@@ -25,6 +25,18 @@
 #include "RenderSettings.h"
 #include <EditorEngine.h>
 
+// Component headers for Cast operations
+#include "AABoundingBoxComponent.h"
+#include "OBoundingBoxComponent.h"
+#include "BillboardComponent.h"
+#include "LineComponent.h"
+#include "CubeComponent.h"
+#include "SphereComponent.h"
+#include "TriangleComponent.h"
+#include "GizmoArrowComponent.h"
+#include "GizmoRotateComponent.h"
+#include "GizmoScaleComponent.h"
+
 URenderManager::URenderManager()
 	: OcclusionCPU(new FOcclusionCullingManagerCPU())
 {
@@ -32,6 +44,41 @@ URenderManager::URenderManager()
 
 URenderManager::~URenderManager()
 {
+}
+
+bool URenderManager::ShouldRenderComponent(UPrimitiveComponent* Primitive) const
+{
+	if (!Primitive || !World) return false;
+	
+	// 기본 Primitive 플래그 체크
+	if (!World->GetRenderSettings().IsShowFlagEnabled(EEngineShowFlags::SF_Primitives))
+		return false;
+	
+	
+	// === Mesh Components ===
+	if (UStaticMeshComponent* SMC = Cast<UStaticMeshComponent>(Primitive))
+	{
+		return World->GetRenderSettings().IsShowFlagEnabled(EEngineShowFlags::SF_StaticMeshes);
+	}
+	
+	// === Text & UI Components ===
+	else if (UTextRenderComponent* TRC = Cast<UTextRenderComponent>(Primitive))
+	{
+		return World->GetRenderSettings().IsShowFlagEnabled(EEngineShowFlags::SF_Text);
+	}
+	else if (UBillboardComponent* BBC = Cast<UBillboardComponent>(Primitive))
+	{
+		return World->GetRenderSettings().IsShowFlagEnabled(EEngineShowFlags::SF_Billboard);
+	}
+	
+	// === Grid Components ===
+	else if (UGridComponent* GC = Cast<UGridComponent>(Primitive))
+	{
+		return World->GetRenderSettings().IsShowFlagEnabled(EEngineShowFlags::SF_Grid);
+	}
+	
+
+	return true;
 }
 
 void URenderManager::BeginFrame()
@@ -111,10 +158,18 @@ void URenderManager::RenderViewports(ACameraActor* Camera, FViewport* Viewport)
 	Renderer->SetViewModeType(EffectiveViewMode);
 
 	// ============ Culling Logic Dispatch ========= //
-	//for (AActor* Actor : World->GetActors())
-	//	Actor->SetCulled(true);
-	//if (World->GetPartitionManager())
-	//	World->GetPartitionManager()->FrustumQuery(ViewFrustum);
+	for (AActor* Actor : World->GetActors())
+	{
+		for (auto& Comp : Actor->GetSceneComponents())
+		{
+			if (UPrimitiveComponent* Prim = Cast<UPrimitiveComponent>(Comp))
+			{
+				Prim->SetCulled(true);
+			}
+		}
+	}
+	if (World->GetPartitionManager())
+		World->GetPartitionManager()->FrustumQuery(ViewFrustum);
 
 	Renderer->UpdateHighLightConstantBuffer(false, rgb, 0, 0, 0, 0);
 
@@ -144,55 +199,39 @@ void URenderManager::RenderViewports(ACameraActor* Camera, FViewport* Viewport)
 	}
 	// ----------------------------------------------------------------
 
-	{	// 일반 액터들 렌더링
-		if (World->GetRenderSettings().IsShowFlagEnabled(EEngineShowFlags::SF_Primitives))
+	if (World->GetRenderSettings().IsShowFlagEnabled(EEngineShowFlags::SF_Primitives))
+	{
+		for (AActor* Actor : World->GetActors())
 		{
-			for (AActor* Actor : World->GetActors())
+			if (!Actor) continue;
+			if (Actor->GetActorHiddenInGame()) continue;
+
+			// ★★★ CPU 오클루전 컬링: UUID로 보임 여부 확인
+			if (bUseCPUOcclusion)
 			{
-				if (!Actor) continue;
-				if (Actor->GetActorHiddenInGame()) continue;
-				if (Actor->GetCulled()) continue; // 컬링된 액터는 스킵
-
-				// ★★★ CPU 오클루전 컬링: UUID로 보임 여부 확인
-				if (bUseCPUOcclusion)
+				uint32_t id = Actor->UUID;
+				if (id < VisibleFlags.size() && VisibleFlags[id] == 0)
 				{
-					uint32_t id = Actor->UUID;
-					if (id < VisibleFlags.size() && VisibleFlags[id] == 0)
-					{
-						continue; // 가려짐 → 스킵c
-					}
-				}
-
-				if (Cast<AStaticMeshActor>(Actor) && !World->GetRenderSettings().IsShowFlagEnabled(EEngineShowFlags::SF_StaticMeshes))
-				{
-					continue;
-				}
-
-			for (USceneComponent* Component : Actor->GetSceneComponents())
-			{
-				if (!Component) continue;
-				if (UActorComponent* ActorComp = Cast<UActorComponent>(Component))
-					if (!ActorComp->IsActive()) continue;
-
-					if (UPrimitiveComponent* Primitive = Cast<UPrimitiveComponent>(Component))
-					{
-						//const UStaticMeshComponent* SMC = Cast<UStaticMeshComponent>(Primitive);
-						//if (SMC && SMC->IsChangedMaterialByUser() == false)
-						//{
-						//	// 유저에 의해 Material이 안 바뀐 UStaticMeshComponent는 따로 sorting rendering
-						//	continue;
-						//}
-						// Actor가 textCmp도 가지고 있고, bounding box도 가지고 있고,
-						// TODO: StaticMeshComp이면 분기해서, 어떤 sorting 자료구조에 넣고 나중에 렌더링 ㄱ?
-						// StatcMeshCmp면 이것의 dirtyflag를 보고, dirtyflag가 true면 tree탐색(이미 바꼇는데 그거 기반으로 어떻게 탐색해?)으로 state tree의 해당 cmp를 다른 곳으로 옮기기
-						Renderer->SetViewModeType(EffectiveViewMode);
-						Primitive->Render(Renderer, ViewMatrix, ProjectionMatrix);
-						Renderer->OMSetDepthStencilState(EComparisonFunc::LessEqual);
-
-						visibleCount++;
-					}
+					continue; // 가려짐 → 스킵c
 				}
 			}
+
+		for (USceneComponent* Component : Actor->GetSceneComponents())
+		{
+			if (UPrimitiveComponent* Primitive = Cast<UPrimitiveComponent>(Component))
+			{
+				// 언리얼 방식: ShowFlag 기반 필터링
+				if (ShouldRenderComponent(Primitive))
+				{
+					Renderer->SetViewModeType(EffectiveViewMode);
+					Primitive->Render(Renderer, ViewMatrix, ProjectionMatrix);
+					Renderer->OMSetDepthStencilState(EComparisonFunc::LessEqual);
+				}
+
+				if (Primitive->GetCulled())
+					visibleCount++;
+			}
+		}
 
 			//MATERIALSORTING
 			{
@@ -302,18 +341,17 @@ void URenderManager::RenderViewports(ACameraActor* Camera, FViewport* Viewport)
 		if (!EngineActor || EngineActor->GetActorHiddenInGame())
 			continue;
 
-		if (Cast<AGridActor>(EngineActor) && !World->GetRenderSettings().IsShowFlagEnabled(EEngineShowFlags::SF_Grid))
-			continue;
-
 		for (USceneComponent* Component : EngineActor->GetSceneComponents())
 		{
-			if (!Component || !Component->IsActive())
-				continue;
 			if (UPrimitiveComponent* Primitive = Cast<UPrimitiveComponent>(Component))
 			{
-				Renderer->SetViewModeType(EffectiveViewMode);
-				Primitive->Render(Renderer, ViewMatrix, ProjectionMatrix);
-				Renderer->OMSetDepthStencilState(EComparisonFunc::LessEqual);
+				// 에디터 액터들도 ShowFlag 필터링 적용
+				if (ShouldRenderComponent(Primitive))
+				{
+					Renderer->SetViewModeType(EffectiveViewMode);
+					Primitive->Render(Renderer, ViewMatrix, ProjectionMatrix);
+					Renderer->OMSetDepthStencilState(EComparisonFunc::LessEqual);
+				}
 			}
 		}
 		Renderer->OMSetBlendState(false);
@@ -371,7 +409,7 @@ void URenderManager::BuildCpuOcclusionSets(
     size_t estimatedCount = 0;
     for (AActor* Actor : World->GetActors())
     {
-        if (Actor && !Actor->GetActorHiddenInGame() && !Actor->GetCulled())
+        if (Actor && !Actor->GetActorHiddenInGame())
         {
             if (Actor->IsA<AStaticMeshActor>()) estimatedCount++;
         }
@@ -385,13 +423,12 @@ void URenderManager::BuildCpuOcclusionSets(
     {
         if (!Actor) continue;
         if (Actor->GetActorHiddenInGame()) continue;
-        if (Actor->GetCulled()) continue;
 
         AStaticMeshActor* SMA = Cast<AStaticMeshActor>(Actor);
         if (!SMA) continue;
 
         UStaticMeshComponent* SMC = SMA->GetStaticMeshComponent();
-        if (!SMC) continue;
+        if (!SMC || SMC->GetCulled()) continue;
         FBound Bound = SMC->GetWorldAABB();
 
         OutOccluders.emplace_back();

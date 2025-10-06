@@ -2,7 +2,7 @@
 #include "LineComponent.h"
 #include "Renderer.h"
 
-void ULineComponent::GetWorldLineData(TArray<FVector>& OutStartPoints, TArray<FVector>& OutEndPoints, TArray<FVector4>& OutColors) const
+void UGridComponent::GetWorldLineData(TArray<FVector>& OutStartPoints, TArray<FVector>& OutEndPoints, TArray<FVector4>& OutColors) const
 {
     if (!bLinesVisible || Lines.empty())
     {
@@ -30,7 +30,7 @@ void ULineComponent::GetWorldLineData(TArray<FVector>& OutStartPoints, TArray<FV
     return;
 }
 
-void ULineComponent::DuplicateSubObjects()
+void UGridComponent::DuplicateSubObjects()
 {
     Super::DuplicateSubObjects();
 
@@ -46,17 +46,17 @@ void ULineComponent::DuplicateSubObjects()
     }
 }
 
-ULineComponent::ULineComponent()
+UGridComponent::UGridComponent()
 {
     bLinesVisible = true;
 }
 
-ULineComponent::~ULineComponent()
+UGridComponent::~UGridComponent()
 {
     ClearLines();
 }
 
-ULine* ULineComponent::AddLine(const FVector& StartPoint, const FVector& EndPoint, const FVector4& Color)
+ULine* UGridComponent::AddLine(const FVector& StartPoint, const FVector& EndPoint, const FVector4& Color)
 {
     ULine* NewLine = NewObject<ULine>();
     NewLine->SetLine(StartPoint, EndPoint);
@@ -67,7 +67,7 @@ ULine* ULineComponent::AddLine(const FVector& StartPoint, const FVector& EndPoin
     return NewLine;
 }
 
-void ULineComponent::RemoveLine(ULine* Line)
+void UGridComponent::RemoveLine(ULine* Line)
 {
     if (!Line) return;
     
@@ -79,7 +79,7 @@ void ULineComponent::RemoveLine(ULine* Line)
     }
 }
 
-void ULineComponent::ClearLines()
+void UGridComponent::ClearLines()
 {
     for (ULine* Line : Lines)
     {
@@ -91,7 +91,7 @@ void ULineComponent::ClearLines()
     Lines.Empty();
 }
 
-void ULineComponent::Render(URenderer* Renderer, const FMatrix& ViewMatrix, const FMatrix& ProjectionMatrix)
+void UGridComponent::Render(URenderer* Renderer, const FMatrix& ViewMatrix, const FMatrix& ProjectionMatrix)
 {
     if (!HasVisibleLines() || !Renderer)
         return;

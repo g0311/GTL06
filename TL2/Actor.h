@@ -121,15 +121,6 @@ public:
     virtual FBound GetBounds() const { return FBound(); }
     void SetIsPicked(bool picked) { bIsPicked = picked; }
     bool GetIsPicked() { return bIsPicked; }
-    void SetCulled(bool InCulled) 
-    { 
-        bIsCulled = InCulled;
-        if (SceneComponents.empty())
-        {
-            return;
-        }
-    }
-    bool GetCulled() { return bIsCulled; }
 
     // 가시성
     void SetActorHiddenInGame(bool bNewHidden) { bHiddenInGame = bNewHidden; }
@@ -161,7 +152,6 @@ protected:
 
     bool bIsPicked = false;
     bool bCanEverTick = true;
-    bool bIsCulled = false;
 
 
 private:
