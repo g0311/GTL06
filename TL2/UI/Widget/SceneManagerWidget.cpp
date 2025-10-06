@@ -9,7 +9,8 @@
 #include "../../Actor.h"
 #include "../../StaticMeshActor.h"
 #include "../../SelectionManager.h"
-#include "GizmoActor.h"
+#include "Picking.h"
+#include "SceneComponent.h"
 #include <algorithm>
 #include <string>
 #include <EditorEngine.h>
@@ -378,9 +379,11 @@ void USceneManagerWidget::HandleActorSelection(AActor* Actor)
     
     if (UWorld* W = GetCurrentWorld())
     {
-        // Clear previous selection and select this actor
-        W->GetSelectionManager()->ClearSelection();
-        W->GetSelectionManager()->SelectActor(Actor);
+        USelectionManager* SelectionMgr = W->GetSelectionManager();
+        if (!SelectionMgr) return;
+        
+        SelectionMgr->ClearSelection();
+        SelectionMgr->SelectActor(Actor);
     }
     
     // Sync with UIManager for gizmo positioning
@@ -390,7 +393,8 @@ void USceneManagerWidget::HandleActorSelection(AActor* Actor)
         
         if (AGizmoActor* Gizmo = GEngine.GetDefaultWorld()->GetGizmoActor())
         {
-            Gizmo->SetActorLocation(Actor->GetActorLocation());
+            // 이제 GizmoActor의 Tick에서 SelectionManager를 통해 위치가 업데이트됨
+            // Gizmo->SetActorLocation(Actor->GetActorLocation());
         }
     }
     

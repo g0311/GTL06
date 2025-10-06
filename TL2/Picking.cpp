@@ -6,6 +6,7 @@
 #include "StaticMeshComponent.h"
 #include "StaticMesh.h"
 #include "CameraActor.h"
+#include "SceneComponent.h"
 #include "MeshLoader.h"
 #include "SelectionManager.h"
 #include <cmath>
@@ -859,6 +860,157 @@ bool CPickingSystem::CheckActorPicking(const AActor* Actor, const FRay& Ray, flo
 					OutDistance = THitWorld;
 					return true;
 				}
+			}
+		}
+	}
+
+	return false;
+}
+
+// === 컴포넌트 피킹 기능 구현 ===
+USceneComponent* CPickingSystem::PerformComponentPicking(AActor* Actor, ACameraActor* Camera)
+{
+	if (!Actor || !Camera) return nullptr;
+
+	// 레이 생성
+	const FMatrix View = Camera->GetViewMatrix();
+	const FMatrix Proj = Camera->GetProjectionMatrix();
+	const FVector CameraWorldPos = Camera->GetActorLocation();
+	const FVector CameraRight = Camera->GetRight();
+	const FVector CameraUp = Camera->GetUp();
+	const FVector CameraForward = Camera->GetForward();
+	FRay ray = MakeRayFromMouseWithCamera(View, Proj, CameraWorldPos, CameraRight, CameraUp, CameraForward);
+
+	USceneComponent* ClosestComponent = nullptr;
+	float ClosestDistance = 1e9f;
+
+	// 액터의 모든 SceneComponent 순회
+	for (auto SceneComponent : Actor->GetSceneComponents())
+	{
+		if (!SceneComponent) continue;
+		
+		// Root 컴포넌트는 제외 (액터 레벨에서 처리)
+		if (SceneComponent == Actor->GetRootComponent()) continue;
+
+		float HitDistance;
+		if (CheckComponentPicking(SceneComponent, ray, HitDistance))
+		{
+			if (HitDistance < ClosestDistance)
+			{
+				ClosestDistance = HitDistance;
+				ClosestComponent = SceneComponent;
+			}
+		}
+	}
+
+	if (ClosestComponent)
+	{
+		char buf[160];
+		sprintf_s(buf, "[Component Pick] Hit component at t=%.3f\n", ClosestDistance);
+		UE_LOG(buf);
+		return ClosestComponent;
+	}
+	else
+	{
+		UE_LOG("[Component Pick] No component hit\n");
+		return nullptr;
+	}
+}
+
+USceneComponent* CPickingSystem::PerformComponentPicking(AActor* Actor, ACameraActor* Camera,
+	const FVector2D& ViewportMousePos,
+	const FVector2D& ViewportSize,
+	const FVector2D& ViewportOffset,
+	float ViewportAspectRatio, FViewport* Viewport)
+{
+	if (!Actor || !Camera) return nullptr;
+
+	// 뛰포트별 레이 생성
+	const FMatrix View = Camera->GetViewMatrix();
+	const FMatrix Proj = Camera->GetProjectionMatrix(ViewportAspectRatio, Viewport);
+	const FVector CameraWorldPos = Camera->GetActorLocation();
+	const FVector CameraRight = Camera->GetRight();
+	const FVector CameraUp = Camera->GetUp();
+	const FVector CameraForward = Camera->GetForward();
+
+	FRay ray = MakeRayFromViewport(View, Proj, CameraWorldPos, CameraRight, CameraUp, CameraForward,
+		ViewportMousePos, ViewportSize, ViewportOffset);
+
+	USceneComponent* ClosestComponent = nullptr;
+	float ClosestDistance = 1e9f;
+
+	// 액터의 모든 SceneComponent 순회
+	for (auto SceneComponent : Actor->GetSceneComponents())
+	{
+		if (!SceneComponent) continue;
+		
+		// Root 컴포넌트는 제외 (액터 레벨에서 처리)
+		if (SceneComponent == Actor->GetRootComponent()) continue;
+
+		float HitDistance;
+		if (CheckComponentPicking(SceneComponent, ray, HitDistance))
+		{
+			if (HitDistance < ClosestDistance)
+			{
+				ClosestDistance = HitDistance;
+				ClosestComponent = SceneComponent;
+			}
+		}
+	}
+
+	if (ClosestComponent)
+	{
+		char buf[160];
+		sprintf_s(buf, "[Viewport Component Pick] Hit component at t=%.3f\n", ClosestDistance);
+		UE_LOG(buf);
+		return ClosestComponent;
+	}
+	else
+	{
+		UE_LOG("[Viewport Component Pick] No component hit\n");
+		return nullptr;
+	}
+}
+
+bool CPickingSystem::CheckComponentPicking(const USceneComponent* Component, const FRay& Ray, float& OutDistance)
+{
+	if (!Component) return false;
+
+	// StaticMeshComponent인 경우에만 피킹 지원
+	if (const UStaticMeshComponent* StaticMeshComponent = Cast<UStaticMeshComponent>(Component))
+	{
+		UStaticMesh* MeshRes = StaticMeshComponent->GetStaticMesh();
+		if (!MeshRes) return false;
+
+		FStaticMesh* StaticMesh = MeshRes->GetStaticMeshAsset();
+		if (!StaticMesh) return false;
+
+		// 로컴 공간에서의 레이로 변환
+		const FMatrix WorldMatrix = StaticMeshComponent->GetWorldMatrix();
+		const FMatrix InvWorld = WorldMatrix.InverseAffine();
+		const FVector4 RayOrigin4(Ray.Origin.X, Ray.Origin.Y, Ray.Origin.Z, 1.0f);
+		const FVector4 RayDir4(Ray.Direction.X, Ray.Direction.Y, Ray.Direction.Z, 0.0f);
+		const FVector4 LocalOrigin4 = RayOrigin4 * InvWorld;
+		const FVector4 LocalDir4 = RayDir4 * InvWorld;
+		const FRay LocalRay{ FVector(LocalOrigin4.X, LocalOrigin4.Y, LocalOrigin4.Z), FVector(LocalDir4.X, LocalDir4.Y, LocalDir4.Z) };
+
+		// 캐시된 BVH 사용
+		FMeshBVH* BVH = UResourceManager::GetInstance().GetOrBuildMeshBVH(MeshRes->GetAssetPathFileName(), StaticMesh);
+		if (BVH)
+		{
+			float THitLocal;
+			if (BVH->IntersectRay(LocalRay, StaticMesh->Vertices, StaticMesh->Indices, THitLocal))
+			{
+				const FVector HitLocal = FVector(
+					LocalOrigin4.X + LocalDir4.X * THitLocal,
+					LocalOrigin4.Y + LocalDir4.Y * THitLocal,
+					LocalOrigin4.Z + LocalDir4.Z * THitLocal);
+				const FVector4 HitLocal4(HitLocal.X, HitLocal.Y, HitLocal.Z, 1.0f);
+				const FVector4 HitWorld4 = HitLocal4 * WorldMatrix;
+				const FVector HitWorld(HitWorld4.X, HitWorld4.Y, HitWorld4.Z);
+				const float THitWorld = (HitWorld - Ray.Origin).Size();
+				OutDistance = THitWorld;
+				return true;
 			}
 		}
 	}

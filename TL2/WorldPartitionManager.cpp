@@ -98,7 +98,11 @@ void UWorldPartitionManager::Unregister(AActor* Owner)
 	if (!ShouldIndexActor(Owner)) return;
 	
 	// BVH에서 해당 액터 소유 모든 프리미티브 제거
-	if (BVH) BVH->Remove(Owner);
+	if (BVH) 
+	{
+		BVH->Remove(Owner);
+		BVH->FlushRebuild(); // Immediately apply removal
+	}
 
 	// DirtySet에서 이 액터 소유 프리미티브 제거
 	TArray<UPrimitiveComponent*> ToErase;
@@ -133,6 +137,7 @@ void UWorldPartitionManager::Unregister(UPrimitiveComponent* Prim)
 	if (BVH)
 	{
 		BVH->Remove(Prim, Prim->GetWorldAABB());
+		BVH->FlushRebuild(); // Immediately apply removal
 	}
 }
 

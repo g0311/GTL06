@@ -124,14 +124,17 @@ inline T* UWorld::SpawnActor(const FTransform& Transform)
 {
     static_assert(std::is_base_of<AActor, T>::value, "T must be derived from AActor");
 
-    // 새 액터 생성
+    // 새 액터 생성 (생성자에서는 컴포넌트 등록 안 함)
     T* NewActor = NewObject<T>();
+
+    // 월드 설정 (컴포넌트 등록에 필요)
+    NewActor->SetWorld(this);
+
+    // 이제 컴포넌트들을 등록 (BVH 등록 포함)
+    NewActor->RegisterAllComponents();
 
     // 초기 트랜스폼 적용
     NewActor->SetActorTransform(Transform);
-
-    //  월드 등록
-    NewActor->SetWorld(this);
 
     // 월드에 등록
     AddActorToLevel(NewActor);

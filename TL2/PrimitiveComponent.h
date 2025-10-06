@@ -56,4 +56,11 @@ protected:
     // 월드 AABB 계산 유틸리티 (Arvo 방식)
     FVector ComputeWorldExtentsArvo(const FVector& LocalExtents, const FMatrix& World) const;
 
+    // Helper function to mark this primitive dirty in BVH
+    void MarkDirtyInBVH();
+
+    // Override registration/unregistration for automatic BVH management
+    void OnRegister() override;
+    void OnUnregister() override;
+
 };

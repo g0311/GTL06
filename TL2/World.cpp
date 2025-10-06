@@ -175,7 +175,7 @@ bool UWorld::DestroyActor(AActor* Actor)
 	// 월드 자료구조에서 제거 (옥트리/파티션/렌더 캐시 등)
 	OnActorDestroyed(Actor);
 
-// 레벨에서 제거 시도
+	// 레벨에서 제거 시도
 	if (Level && Level->RemoveActor(Actor))
 	{
 		// 옥트리에서 제거
@@ -195,18 +195,12 @@ bool UWorld::DestroyActor(AActor* Actor)
 
 void UWorld::OnActorSpawned(AActor* Actor)
 {
-	if (Actor)
-	{
-		Partition->Register(Actor);
-	}
+
 }
 
 void UWorld::OnActorDestroyed(AActor* Actor)
 {
-	if (Actor)
-	{
-		Partition->Unregister(Actor);
-	}
+
 }
 
 inline FString RemoveObjExtension(const FString& FileName)
@@ -283,6 +277,7 @@ void UWorld::AddActorToLevel(AActor* Actor)
 	if (Level) 
 	{
 		Level->AddActor(Actor);
-		Partition->Register(Actor);
+		// BVH registration is now handled automatically in UPrimitiveComponent::OnRegister
+		// Individual actor spawn will trigger auto-registration
 	}
 }

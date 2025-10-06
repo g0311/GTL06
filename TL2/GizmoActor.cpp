@@ -133,15 +133,17 @@ void AGizmoActor::Tick(float DeltaSeconds)
 	if (!UIManager) UIManager = &UUIManager::GetInstance();
 
 	// 컴포넌트 활성화 상태 업데이트    
-	if (SelectionManager->HasSelection() && CameraActor)
+	if ((SelectionManager->HasSelection() || SelectionManager->HasComponentSelection()) && CameraActor)
 	{
 		TargetActor = SelectionManager->GetSelectedActor();
 
-		// 기즈모 위치를 선택된 액터 위치로 업데이트
+		// 기즈모 위치를 선택된 객체(컴포넌트 또는 액터) 위치로 업데이트
 		if (TargetActor)
 		{
 			SetSpaceWorldMatrix(CurrentSpace, TargetActor);
-			SetActorLocation(TargetActor->GetActorLocation());
+			// 컴포넌트가 선택되어 있으면 컴포넌트 위치, 그렇지 않으면 액터 위치
+			FVector GizmoPosition = SelectionManager->GetSelectionLocation();
+			SetActorLocation(GizmoPosition);
 		}
 	}
 	else
@@ -194,8 +196,20 @@ void AGizmoActor::SetSpaceWorldMatrix(EGizmoSpace NewSpace, AActor* PickedActor)
 		if (!PickedActor)
 			return;
 
-		// 타겟 액터 회전 가져오기
-		FQuat TargetRot = PickedActor->GetActorRotation();
+		// 선택된 컴포넌트 확인
+		USceneComponent* SelectedComponent = SelectionManager ? SelectionManager->GetSelectedComponent() : nullptr;
+		bool bTransformingComponent = (SelectedComponent != nullptr);
+
+		// 타겟 회전 가져오기 (컴포넌트 우선)
+		FQuat TargetRot;
+		if (bTransformingComponent && SelectedComponent)
+		{
+			TargetRot = SelectedComponent->GetWorldRotation();
+		}
+		else
+		{
+			TargetRot = PickedActor->GetActorRotation();
+		}
 
 		// ───────── Translate Gizmo ─────────
 	   // ArrowX->AddRelativeRotation(AC);
@@ -292,13 +306,17 @@ static FVector2D GetStableAxisDirection(const FVector& WorldAxis, const ACameraA
 
 void AGizmoActor::OnDrag(AActor* Target, uint32 GizmoAxis, float MouseDeltaX, float MouseDeltaY, const ACameraActor* Camera, FViewport* Viewport)
 {
-	if (!Target || !Camera)
+	if (!Target || !Camera || !SelectionManager)
 		return;
 
 	FVector2D MouseDelta = FVector2D(MouseDeltaX, MouseDeltaY);
 
 	FVector Axis{};
 	FVector GizmoPosition = GetActorLocation();
+	
+	// 선택된 컴포넌트가 있는지 확인
+	USceneComponent* SelectedComponent = SelectionManager->GetSelectedComponent();
+	bool bTransformingComponent = (SelectedComponent != nullptr);
 
 	// ────────────── World / Local 축 선택 ──────────────
 	if (CurrentSpace == EGizmoSpace::World)
@@ -312,11 +330,26 @@ void AGizmoActor::OnDrag(AActor* Target, uint32 GizmoAxis, float MouseDeltaX, fl
 	}
 	else if (CurrentSpace == EGizmoSpace::Local)
 	{
-		switch (GizmoAxis)
+		if (bTransformingComponent && SelectedComponent)
 		{
-		case 1: Axis = Target->GetActorRight();   break; // Local X
-		case 2: Axis = Target->GetActorForward(); break; // Local Y
-		case 3: Axis = Target->GetActorUp();      break; // Local Z
+			// 컴포넌트 기준 로컬 축
+			FQuat ComponentRotation = SelectedComponent->GetWorldRotation();
+			switch (GizmoAxis)
+			{
+			case 1: Axis = ComponentRotation.RotateVector(FVector(1, 0, 0)); break; // Component Local X
+			case 2: Axis = ComponentRotation.RotateVector(FVector(0, 1, 0)); break; // Component Local Y
+			case 3: Axis = ComponentRotation.RotateVector(FVector(0, 0, 1)); break; // Component Local Z
+			}
+		}
+		else
+		{
+			// 액터 기준 로컬 축
+			switch (GizmoAxis)
+			{
+			case 1: Axis = Target->GetActorRight();   break; // Actor Local X
+			case 2: Axis = Target->GetActorForward(); break; // Actor Local Y
+			case 3: Axis = Target->GetActorUp();      break; // Actor Local Z
+			}
 		}
 	}
 
@@ -350,8 +383,19 @@ void AGizmoActor::OnDrag(AActor* Target, uint32 GizmoAxis, float MouseDeltaX, fl
 			worldPerPixel = (2.0f * z) / (h * yScale);
 		}
 		float Movement = px * worldPerPixel;
-		FVector CurrentLocation = Target->GetActorLocation();
-		Target->SetActorLocation(CurrentLocation + Axis * Movement);
+		
+		if (bTransformingComponent && SelectedComponent)
+		{
+			// 컴포넌트 이동
+			FVector CurrentLocation = SelectedComponent->GetWorldLocation();
+			SelectedComponent->SetWorldLocation(CurrentLocation + Axis * Movement);
+		}
+		else
+		{
+			// 액터 이동
+			FVector CurrentLocation = Target->GetActorLocation();
+			Target->SetActorLocation(CurrentLocation + Axis * Movement);
+		}
 
 		break;
 	}
@@ -369,11 +413,26 @@ void AGizmoActor::OnDrag(AActor* Target, uint32 GizmoAxis, float MouseDeltaX, fl
 		}
 		else if (CurrentSpace == EGizmoSpace::Local)
 		{
-			switch (GizmoAxis)
+			if (bTransformingComponent && SelectedComponent)
 			{
-			case 1: Axis = Target->GetActorRight();   break; // Local X
-			case 2: Axis = Target->GetActorForward(); break; // Local Y
-			case 3: Axis = Target->GetActorUp();      break; // Local Z
+				// 컴포넌트 기준 로컬 축
+				FQuat ComponentRotation = SelectedComponent->GetWorldRotation();
+				switch (GizmoAxis)
+				{
+				case 1: Axis = ComponentRotation.RotateVector(FVector(1, 0, 0)); break; // Component Local X
+				case 2: Axis = ComponentRotation.RotateVector(FVector(0, 1, 0)); break; // Component Local Y
+				case 3: Axis = ComponentRotation.RotateVector(FVector(0, 0, 1)); break; // Component Local Z
+				}
+			}
+			else
+			{
+				// 액터 기준 로컬 축
+				switch (GizmoAxis)
+				{
+				case 1: Axis = Target->GetActorRight();   break; // Actor Local X
+				case 2: Axis = Target->GetActorForward(); break; // Actor Local Y
+				case 3: Axis = Target->GetActorUp();      break; // Actor Local Z
+				}
 			}
 		}
 
@@ -402,23 +461,45 @@ void AGizmoActor::OnDrag(AActor* Target, uint32 GizmoAxis, float MouseDeltaX, fl
 			worldPerPixel = (2.0f * z) / (h * yScale);
 		}
 		float Movement = px * worldPerPixel;
-		FVector NewScale = Target->GetActorScale();
-
-		// Apply movement to the correct local axis based on which gizmo was dragged
-		switch (GizmoAxis)
+		
+		if (bTransformingComponent && SelectedComponent)
 		{
-		case 1: // X Axis
-			NewScale.X += Movement;
-			break;
-		case 2: // Y Axis
-			NewScale.Y += Movement;
-			break;
-		case 3: // Z Axis
-			NewScale.Z += Movement;
-			break;
+			// 컴포넌트 스케일
+			FVector NewScale = SelectedComponent->GetWorldScale();
+			// Apply movement to the correct local axis based on which gizmo was dragged
+			switch (GizmoAxis)
+			{
+			case 1: // X Axis
+				NewScale.X += Movement;
+				break;
+			case 2: // Y Axis
+				NewScale.Y += Movement;
+				break;
+			case 3: // Z Axis
+				NewScale.Z += Movement;
+				break;
+			}
+			SelectedComponent->SetWorldScale(NewScale);
 		}
-
-		Target->SetActorScale(NewScale);
+		else
+		{
+			// 액터 스케일
+			FVector NewScale = Target->GetActorScale();
+			// Apply movement to the correct local axis based on which gizmo was dragged
+			switch (GizmoAxis)
+			{
+			case 1: // X Axis
+				NewScale.X += Movement;
+				break;
+			case 2: // Y Axis
+				NewScale.Y += Movement;
+				break;
+			case 3: // Z Axis
+				NewScale.Z += Movement;
+				break;
+			}
+			Target->SetActorScale(NewScale);
+		}
 
 		break;
 	}
@@ -435,7 +516,16 @@ void AGizmoActor::OnDrag(AActor* Target, uint32 GizmoAxis, float MouseDeltaX, fl
 
 		// = MakeQuatFromAxisAngle(RotationAxis.X, Angle);
 		FQuat DeltaQuat{};
-		FQuat CurrentRot = Target->GetActorRotation();
+		FQuat CurrentRot;
+		if (bTransformingComponent && SelectedComponent)
+		{
+			CurrentRot = SelectedComponent->GetWorldRotation();
+		}
+		else
+		{
+			CurrentRot = Target->GetActorRotation();
+		}
+		
 		if (CurrentSpace == EGizmoSpace::World)
 		{
 
@@ -466,7 +556,15 @@ void AGizmoActor::OnDrag(AActor* Target, uint32 GizmoAxis, float MouseDeltaX, fl
 			}
 			}
 			FQuat NewRot = DeltaQuat * CurrentRot; // 월드 기준 회전
-			Target->SetActorRotation(NewRot);
+			
+			if (bTransformingComponent && SelectedComponent)
+			{
+				SelectedComponent->SetWorldRotation(NewRot);
+			}
+			else
+			{
+				Target->SetActorRotation(NewRot);
+			}
 		}
 		else
 		{
@@ -481,7 +579,15 @@ void AGizmoActor::OnDrag(AActor* Target, uint32 GizmoAxis, float MouseDeltaX, fl
 
 			//FQuat DeltaQuat = MakeQuatFromAxisAngle(RotationAxis, Angle);
 
-			FQuat CurrentRot = Target->GetActorRotation();
+			FQuat CurrentRot;
+			if (bTransformingComponent && SelectedComponent)
+			{
+				CurrentRot = SelectedComponent->GetWorldRotation();
+			}
+			else
+			{
+				CurrentRot = Target->GetActorRotation();
+			}
 
 			switch (GizmoAxis)
 			{
@@ -512,7 +618,14 @@ void AGizmoActor::OnDrag(AActor* Target, uint32 GizmoAxis, float MouseDeltaX, fl
 
 			FQuat NewRot = DeltaQuat * CurrentRot; // 월드 기준 회전
 
-			Target->SetActorRotation(NewRot);
+			if (bTransformingComponent && SelectedComponent)
+			{
+				SelectedComponent->SetWorldRotation(NewRot);
+			}
+			else
+			{
+				Target->SetActorRotation(NewRot);
+			}
 
 
 			break;
@@ -525,9 +638,11 @@ void AGizmoActor::OnDrag(AActor* Target, uint32 GizmoAxis, float MouseDeltaX, fl
 
 void AGizmoActor::UpdateGizmoPosition()
 {
-	if (!TargetActor) return;
+	if (!TargetActor || !SelectionManager) return;
 
-	SetActorLocation(TargetActor->GetActorLocation());
+	// SelectionManager의 통합 선택 정보를 사용
+	FVector GizmoPosition = SelectionManager->GetSelectionLocation();
+	SetActorLocation(GizmoPosition);
 }
 
 void AGizmoActor::ProcessGizmoInteraction(ACameraActor* Camera, FViewport* Viewport, float MousePositionX, float MousePositionY)
@@ -576,7 +691,8 @@ void AGizmoActor::ProcessGizmoDragging(ACameraActor* Camera, FViewport* Viewport
 		{
 			OnDrag(TargetActor, GizmoAxis, MouseDelta.X, MouseDelta.Y, Camera, Viewport);
 			bIsDragging = true;
-			SetActorLocation(TargetActor->GetActorLocation());
+			// 기즈모 위치를 선택된 객체 위치로 업데이트
+			UpdateGizmoPosition();
 		}
 	}
 	if (InputManager->IsMouseButtonReleased(LeftButton))

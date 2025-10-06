@@ -4,6 +4,7 @@
 #include "ObjectFactory.h"
 #include "PrimitiveComponent.h"
 #include "WorldPartitionManager.h"
+#include "World.h"
 
 USceneComponent::USceneComponent()
     : RelativeLocation(0, 0, 0)
@@ -104,9 +105,12 @@ void USceneComponent::SetWorldTransform(const FTransform& W)
     }
 
     RelativeLocation = RelativeTransform.Translation;
-    UE_LOG("UUID: %d, RelativeLocation: %.2f, %.2f, %.2f", UUID, RelativeLocation.X, RelativeLocation.Y, RelativeLocation.Z);
+    //UE_LOG("UUID: %d, RelativeLocation: %.2f, %.2f, %.2f", UUID, RelativeLocation.X, RelativeLocation.Y, RelativeLocation.Z);
     RelativeRotation = RelativeTransform.Rotation;
     RelativeScale = RelativeTransform.Scale3D;
+    
+    // Mark all attached primitive components dirty in BVH (recursive)
+    MarkAttachedPrimitivesAsDirty();
 }
  
 void USceneComponent::SetWorldLocation(const FVector& L)
@@ -277,4 +281,27 @@ void USceneComponent::DuplicateSubObjects()
 void USceneComponent::UpdateRelativeTransform()
 {
     RelativeTransform = FTransform(RelativeLocation, RelativeRotation, RelativeScale);
+    MarkAttachedPrimitivesAsDirty();
+}
+
+void USceneComponent::MarkAttachedPrimitivesAsDirty()
+{
+    // If this component itself is a primitive component, mark it dirty
+    if (UPrimitiveComponent* PrimComp = Cast<UPrimitiveComponent>(this))
+    {
+        UWorld* World = GetWorld();
+        if (World && World->GetPartitionManager())
+        {
+            World->GetPartitionManager()->MarkDirty(PrimComp);
+        }
+    }
+    
+    // Recursively mark all attached children
+    for (USceneComponent* Child : AttachChildren)
+    {
+        if (Child)
+        {
+            Child->MarkAttachedPrimitivesAsDirty();
+        }
+    }
 }

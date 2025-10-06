@@ -4,6 +4,8 @@
 #include "SceneComponent.h"
 #include "SceneRotationUtils.h"
 #include "AABoundingBoxComponent.h"
+#include "World.h"
+#include "WorldPartitionManager.h"
 
 void UPrimitiveComponent::SetMaterial(const FString& FilePath, EVertexLayoutType layoutType)
 {
@@ -58,6 +60,51 @@ FBound UPrimitiveComponent::GetWorldAABB() const
 
     const FVector WorldExtents = ComputeWorldExtentsArvo(LocalExtents, WorldMat);
     return FBound(WorldCenter - WorldExtents, WorldCenter + WorldExtents);
+}
+
+void UPrimitiveComponent::MarkDirtyInBVH()
+{
+    UWorld* World = GetWorld();
+    if (World)
+    {
+        UWorldPartitionManager* PartitionMgr = World->GetPartitionManager();
+        if (PartitionMgr)
+        {
+            PartitionMgr->MarkDirty(this);
+        }
+    }
+}
+
+void UPrimitiveComponent::OnRegister()
+{
+    Super::OnRegister();
+    
+    // Automatically register to BVH when component is registered
+    UWorld* World = GetWorld();
+    if (World)
+    {
+        UWorldPartitionManager* PartitionMgr = World->GetPartitionManager();
+        if (PartitionMgr)
+        {
+            PartitionMgr->Register(this);
+        }
+    }
+}
+
+void UPrimitiveComponent::OnUnregister()
+{
+    // Automatically unregister from BVH when component is unregistered
+    UWorld* World = GetWorld();
+    if (World)
+    {
+        UWorldPartitionManager* PartitionMgr = World->GetPartitionManager();
+        if (PartitionMgr)
+        {
+            PartitionMgr->Unregister(this);
+        }
+    }
+    
+    Super::OnUnregister();
 }
 
 void UPrimitiveComponent::DuplicateSubObjects()

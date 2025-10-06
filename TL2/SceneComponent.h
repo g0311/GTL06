@@ -12,6 +12,7 @@ enum class EAttachmentRule
 };
 
 class URenderer;
+class UPrimitiveComponent;
 class USceneComponent : public UActorComponent
 {
 public:
@@ -26,41 +27,41 @@ public:
     // ──────────────────────────────
     // Relative Transform API
     // ──────────────────────────────
-    void SetRelativeLocation(const FVector& NewLocation);
+    virtual void SetRelativeLocation(const FVector& NewLocation);
     FVector GetRelativeLocation() const;
 
-    void SetRelativeRotation(const FQuat& NewRotation);
+    virtual void SetRelativeRotation(const FQuat& NewRotation);
     FQuat GetRelativeRotation() const;
 
-    void SetRelativeScale(const FVector& NewScale);
+    virtual void SetRelativeScale(const FVector& NewScale);
     FVector GetRelativeScale() const;
 
-    void AddRelativeLocation(const FVector& DeltaLocation);
-    void AddRelativeRotation(const FQuat& DeltaRotation);
-    void AddRelativeScale3D(const FVector& DeltaScale);
+    virtual void AddRelativeLocation(const FVector& DeltaLocation);
+    virtual void AddRelativeRotation(const FQuat& DeltaRotation);
+    virtual void AddRelativeScale3D(const FVector& DeltaScale);
 
     // ──────────────────────────────
     // World Transform API
     // ──────────────────────────────
     FTransform GetWorldTransform() const;
-    void SetWorldTransform(const FTransform& W);
+    virtual void SetWorldTransform(const FTransform& W);
 
-    void SetWorldLocation(const FVector& L);
+    virtual void SetWorldLocation(const FVector& L);
     FVector GetWorldLocation() const;
 
-    void SetWorldRotation(const FQuat& R);
+    virtual void SetWorldRotation(const FQuat& R);
     FQuat GetWorldRotation() const;
 
-    void SetWorldScale(const FVector& S);
+    virtual void SetWorldScale(const FVector& S);
     FVector GetWorldScale() const;
 
-    void AddWorldOffset(const FVector& Delta);
-    void AddWorldRotation(const FQuat& DeltaRot);
-    void SetWorldLocationAndRotation(const FVector& L, const FQuat& R);
+    virtual void AddWorldOffset(const FVector& Delta);
+    virtual void AddWorldRotation(const FQuat& DeltaRot);
+    virtual void SetWorldLocationAndRotation(const FVector& L, const FQuat& R);
 
-    void AddLocalOffset(const FVector& Delta);
-    void AddLocalRotation(const FQuat& DeltaRot);
-    void SetLocalLocationAndRotation(const FVector& L, const FQuat& R);
+    virtual void AddLocalOffset(const FVector& Delta);
+    virtual void AddLocalRotation(const FQuat& DeltaRot);
+    virtual void SetLocalLocationAndRotation(const FVector& L, const FQuat& R);
 
     FMatrix GetWorldMatrix() const; // ToMatrixWithScale
 
@@ -75,7 +76,6 @@ public:
     // ──────────────────────────────
     USceneComponent* GetAttachParent() const { return AttachParent; }
     const TArray<USceneComponent*>& GetAttachChildren() const { return AttachChildren; }
-    UWorld* GetWorld() { return AttachParent ? AttachParent->GetWorld() : nullptr; }
 
     // ───── 복사 관련 ────────────────────────────
     void DuplicateSubObjects() override;
@@ -101,5 +101,8 @@ protected:
     FTransform RelativeTransform;
 
     void UpdateRelativeTransform();
+    
+    // Helper function to mark all attached primitive components dirty in BVH
+    void MarkAttachedPrimitivesAsDirty();
     
 };

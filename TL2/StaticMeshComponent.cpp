@@ -77,6 +77,7 @@ void UStaticMeshComponent::SetStaticMesh(const FString& PathFileName)
             SetLocalAABB(FBound());
         }
     }
+    MarkAttachedPrimitivesAsDirty();
 }
 
 void UStaticMeshComponent::Serialize(bool bIsLoading, FPrimitiveData& InOut)
