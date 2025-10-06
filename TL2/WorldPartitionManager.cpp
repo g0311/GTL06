@@ -58,9 +58,13 @@ void UWorldPartitionManager::Register(AActor* Owner)
 {
 	if (!Owner) return;
 	if (!ShouldIndexActor(Owner)) return;
-	if (DirtySet.insert(Owner).second)
+	// 액터의 모든 PrimitiveComponent를 등록
+	for (USceneComponent* SC : Owner->GetSceneComponents())
 	{
-		DirtyQueue.push(Owner);
+		if (UPrimitiveComponent* Prim = Cast<UPrimitiveComponent>(SC))
+		{
+			Register(Prim);
+		}
 	}
 }
 
@@ -68,21 +72,24 @@ void UWorldPartitionManager::BulkRegister(const TArray<AActor*>& Actors)
 {
 	if (Actors.empty()) return;
 
-	TArray<std::pair<AActor*, FBound>> ActorsAndBounds;
-	ActorsAndBounds.reserve(Actors.size());
-
+	TArray<std::pair<UPrimitiveComponent*, FBound>> PrimsAndBounds;
+	
 	for (AActor* Actor : Actors)
 	{
 		if (Actor && ShouldIndexActor(Actor))
 		{
-			ActorsAndBounds.push_back({ Actor, Actor->GetBounds() });
+			for (USceneComponent* SC : Actor->GetSceneComponents())
+			{
+				if (UPrimitiveComponent* Prim = Cast<UPrimitiveComponent>(SC))
+				{
+					PrimsAndBounds.push_back({ Prim, Prim->GetWorldAABB() });
+					DirtySet.erase(Prim);
+				}
+			}
 		}
-		DirtySet.erase(Actor);
 	}
 
-	// Octree: 기존 대량 삽입
-	//if (SceneOctree) SceneOctree->BulkInsert(ActorsAndBounds);
-	if (BVH) BVH->BulkInsert(ActorsAndBounds);
+	if (BVH) BVH->BulkInsert(PrimsAndBounds);
 }
 
 void UWorldPartitionManager::Unregister(AActor* Owner)
@@ -90,12 +97,42 @@ void UWorldPartitionManager::Unregister(AActor* Owner)
 	if (!Owner) return;
 	if (!ShouldIndexActor(Owner)) return;
 	
-	//if (SceneOctree) SceneOctree->Remove(Owner);
+	// BVH에서 해당 액터 소유 모든 프리미티브 제거
 	if (BVH) BVH->Remove(Owner);
 
-	if (USceneComponent* Root = Owner->GetRootComponent())
+	// DirtySet에서 이 액터 소유 프리미티브 제거
+	TArray<UPrimitiveComponent*> ToErase;
+	for (USceneComponent* SC : Owner->GetSceneComponents())
 	{
-		DirtySet.erase(Owner);
+		if (UPrimitiveComponent* Prim = Cast<UPrimitiveComponent>(SC))
+		{
+			ToErase.Add(Prim);
+		}
+	}
+	for (UPrimitiveComponent* Prim : ToErase)
+	{
+		DirtySet.erase(Prim);
+	}
+}
+
+void UWorldPartitionManager::Register(UPrimitiveComponent* Prim)
+{
+	if (!Prim) return;
+	AActor* Owner = Prim->GetOwner();
+	if (!Owner || !ShouldIndexActor(Owner)) return;
+	if (DirtySet.insert(Prim).second)
+	{
+		DirtyQueue.push(Prim);
+	}
+}
+
+void UWorldPartitionManager::Unregister(UPrimitiveComponent* Prim)
+{
+	if (!Prim) return;
+	DirtySet.erase(Prim);
+	if (BVH)
+	{
+		BVH->Remove(Prim, Prim->GetWorldAABB());
 	}
 }
 
@@ -103,10 +140,23 @@ void UWorldPartitionManager::MarkDirty(AActor* Owner)
 {
 	if (!Owner) return;
 	if (!ShouldIndexActor(Owner)) return;
-
-	if (DirtySet.insert(Owner).second)
+	for (USceneComponent* SC : Owner->GetSceneComponents())
 	{
-		DirtyQueue.push(Owner);
+		if (UPrimitiveComponent* Prim = Cast<UPrimitiveComponent>(SC))
+		{
+			MarkDirty(Prim);
+		}
+	}
+}
+
+void UWorldPartitionManager::MarkDirty(UPrimitiveComponent* Prim)
+{
+	if (!Prim) return;
+	AActor* Owner = Prim->GetOwner();
+	if (!Owner || !ShouldIndexActor(Owner)) return;
+	if (DirtySet.insert(Prim).second)
+	{
+		DirtyQueue.push(Prim);
 	}
 }
 
@@ -114,22 +164,27 @@ void UWorldPartitionManager::Update(float DeltaTime, uint32 InBugetCount)
 {
 	// 프레임 히칭 방지를 위해 컴포넌트 카운트 제한
 	uint32 processed = 0;
+	bool any = false;
 	while (!DirtyQueue.empty() && processed < InBugetCount)
 	{
-		AActor* Actor = DirtyQueue.front();
+		UPrimitiveComponent* Prim = DirtyQueue.front();
 		DirtyQueue.pop();
-		if (DirtySet.erase(Actor) == 0)
+		if (DirtySet.erase(Prim) == 0)
 		{
 			// 이미 처리되었거나 제거됨
 			continue;
 		}
 
-		if (!Actor) continue;
-		//if (SceneOctree) SceneOctree->Update(Actor);
-		if (BVH) BVH->Update(Actor);
+		if (!Prim) continue;
+		if (BVH)
+		{
+			BVH->Insert(Prim, Prim->GetWorldAABB());
+			any = true;
+		}
 
 		++processed;
 	}
+	if (any && BVH) BVH->FlushRebuild();
 }
 
 //void UWorldPartitionManager::RayQueryOrdered(FRay InRay, OUT TArray<std::pair<AActor*, float>>& Candidates)
