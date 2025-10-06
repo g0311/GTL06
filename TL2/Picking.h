@@ -1,5 +1,4 @@
 ﻿#pragma once
-#include "Vector.h"
 #include "InputManager.h"
 #include "UEContainer.h"
 #include "Enums.h"
@@ -9,13 +8,9 @@ class AGizmoActor;
 // Forward Declarations
 class AActor;
 class ACameraActor;
+class USceneComponent;
 class FViewport;
 // Unreal-style simple ray type
-struct alignas(16) FRay
-{
-    FVector Origin;
-    FVector Direction; // Normalized
-};
 
 // Build A world-space ray from the current mouse position and camera/projection info.
 // - InView: view matrix (row-major, row-vector convention; built by LookAtLH)
@@ -61,7 +56,7 @@ bool IntersectRayTriangleMT(const FRay& InRay,
 class CPickingSystem
 {
 public:
-    /** === 피킹 실행 === */
+    /** === 액터 피킹 실행 === */
     static AActor* PerformPicking(const TArray<AActor*>& Actors, ACameraActor* Camera);
 
     // Viewport-specific picking for multi-viewport scenarios
@@ -92,9 +87,19 @@ public:
     
     // 기즈모 드래그로 액터를 이동시키는 함수
     static void DragActorWithGizmo(AActor* Actor, AGizmoActor* GizmoActor, uint32 GizmoAxis, const FVector2D& MouseDelta, const ACameraActor* Camera, EGizmoMode InGizmoMode);
+    
+    /** === 컴포넌트 피킹 실행 === */
+    // 특정 액터의 컴포넌트 중에서 피킹된 컴포넌트 반환
+    static USceneComponent* PerformComponentPicking(AActor* Actor, ACameraActor* Camera);
+    static USceneComponent* PerformComponentPicking(AActor* Actor, ACameraActor* Camera,
+                                                   const FVector2D& ViewportMousePos,
+                                                   const FVector2D& ViewportSize,
+                                                   const FVector2D& ViewportOffset,
+                                                   float ViewportAspectRatio, FViewport* Viewport);
 
     /** === 헬퍼 함수들 === */
     static bool CheckActorPicking(const AActor* Actor, const FRay& Ray, float& OutDistance);
+    static bool CheckComponentPicking(const USceneComponent* Component, const FRay& Ray, float& OutDistance);
 
 
     static uint32 GetPickCount() { return TotalPickCount; }

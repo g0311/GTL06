@@ -1,6 +1,5 @@
 ﻿#include "pch.h"
 
-#include "Vector.h"
 #include "Frustum.h"
 #include "AABoundingBoxComponent.h"
 #include "CameraComponent.h"

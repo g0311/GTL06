@@ -7,6 +7,7 @@
 #include "MeshComponent.h"
 #include "TextRenderComponent.h"
 #include "WorldPartitionManager.h"
+#include "SelectionManager.h"
 #include "BillboardComponent.h"
 
 #include "World.h"
@@ -14,14 +15,9 @@ AActor::AActor()
 {
 	Name = "DefaultActor";
 	RootComponent = CreateDefaultSubobject<USceneComponent>(FName("SceneComponent"));
-	CollisionComponent = CreateDefaultSubobject<UAABoundingBoxComponent>(FName("CollisionBox"));
 	TextComp = CreateDefaultSubobject<UTextRenderComponent>("TextBox");
 
 	// TODO (동민) - 임시로 루트 컴포넌트에 붙임. 추후 계층 구조 관리 기능 구현 필요
-	if (CollisionComponent)
-	{
-		CollisionComponent->SetupAttachment(RootComponent);
-	}
 	if (TextComp)
 	{
 		TextComp->SetupAttachment(RootComponent);
@@ -122,7 +118,13 @@ void AActor::AddOwnedComponent(UActorComponent* Component)
 
 	OwnedComponents.insert(Component);
 	Component->SetOwner(this);
-	Component->RegisterComponent(); // Register(씬이면 트리 포함)
+	
+	// 월드가 설정되어 있으면 즉시 등록 (런타임에 컴포넌트 추가)
+	if (World)
+	{
+		Component->RegisterComponent();
+	}
+	// 월드가 없으면 RegisterAllComponents()에서 나중에 등록
 
 	if (USceneComponent* SC = Cast<USceneComponent>(Component))
 	{
@@ -157,15 +159,35 @@ void AActor::RemoveOwnedComponent(UActorComponent* Component)
 		SceneComponents.Remove(SC);
 		UnregisterComponentTree(SC);
 		SC->DetachFromParent(true);
+		if (SC->IsA<UPrimitiveComponent>() && GetWorld())
+		{
+			GetWorld()->GetPartitionManager()->Unregister(Cast<UPrimitiveComponent>(SC));
+			if (GetWorld()->GetSelectionManager()->GetSelectedComponent() == SC)
+			{
+				GetWorld()->GetSelectionManager()->DeselectComponent();
+			}
+		}
 	}
 	Component->UnregisterComponent();
 	Component->DestroyComponent();
 }
 
+void AActor::RegisterAllComponents()
+{
+	// 월드가 설정된 후 모든 컴포넌트를 등록
+	for (UActorComponent* Comp : OwnedComponents)
+	{
+		if (Comp)
+		{
+			Comp->RegisterComponent(); // 이제 GetWorld()가 유효함
+		}
+	}
+}
+
 void AActor::UnregisterAllComponents(bool bCallEndPlayOnBegun)
 {
 	// 파괴 경로에서 안전하게 등록 해제
-	// 복사본으로 순회 (컨테이너 변형 중 안전)
+	// 복사본으로 순회 (컴테이너 변형 중 안전)
 	TArray<UActorComponent*> Temp;
 	Temp.reserve(OwnedComponents.size());
 	for (UActorComponent* C : OwnedComponents) Temp.push_back(C);
@@ -220,7 +242,7 @@ void AActor::SetActorTransform(const FTransform& NewTransform)
 	if (!(OldTransform == NewTransform))
 	{
 		RootComponent->SetWorldTransform(NewTransform);
-		MarkPartitionDirty();
+		// BVH update is now handled in USceneComponent::SetWorldTransform
 	}
 }
 
@@ -240,7 +262,7 @@ void AActor::SetActorLocation(const FVector& NewLocation)
 	if (!(OldLocation == NewLocation)) // 위치가 실제로 변경되었을 때만
 	{
 		RootComponent->SetWorldLocation(NewLocation);
-		MarkPartitionDirty();
+		// BVH update is now handled in USceneComponent transform methods
 	}
 }
 
@@ -264,7 +286,7 @@ void AActor::SetActorRotation(const FVector& EulerDegree)
 		if (!(OldRotation == NewRotation)) // 회전이 실제로 변경되었을 때만
 		{
 			RootComponent->SetWorldRotation(NewRotation);
-			MarkPartitionDirty();
+			// BVH update is now handled in USceneComponent transform methods
 		}
 	}
 }
@@ -279,7 +301,6 @@ void AActor::SetActorRotation(const FQuat& InQuat)
 	if (!(OldRotation == InQuat)) // 회전이 실제로 변경되었을 때만
 	{
 		RootComponent->SetWorldRotation(InQuat);
-		MarkPartitionDirty();
 	}
 }
 
@@ -299,7 +320,6 @@ void AActor::SetActorScale(const FVector& NewScale)
 	if (!(OldScale == NewScale)) // 스케일이 실제로 변경되었을 때만
 	{
 		RootComponent->SetWorldScale(NewScale);
-		MarkPartitionDirty();
 	}
 }
 
@@ -322,7 +342,6 @@ void AActor::AddActorWorldRotation(const FQuat& DeltaRotation)
 	if (RootComponent && !DeltaRotation.IsIdentity()) // 단위 쿼터니온이 아닐 때만
 	{
 		RootComponent->AddWorldRotation(DeltaRotation);
-		MarkPartitionDirty();
 	}
 }
 
@@ -340,7 +359,6 @@ void AActor::AddActorWorldLocation(const FVector& DeltaLocation)
 	if (RootComponent && !DeltaLocation.IsZero()) // 영 벡터가 아닐 때만
 	{
 		RootComponent->AddWorldOffset(DeltaLocation);
-		MarkPartitionDirty();
 	}
 }
 
@@ -358,8 +376,6 @@ void AActor::AddActorLocalRotation(const FQuat& DeltaRotation)
 	if (RootComponent && !DeltaRotation.IsIdentity()) // 단위 쿼터니온이 아닐 때만
 	{
 		RootComponent->AddLocalRotation(DeltaRotation);
-		if (GetWorld() && GetWorld()->GetPartitionManager())
-			GetWorld()->GetPartitionManager()->MarkDirty(this);
 	}
 }
 
@@ -368,7 +384,6 @@ void AActor::AddActorLocalLocation(const FVector& DeltaLocation)
 	if (RootComponent && !DeltaLocation.IsZero()) // 영 벡터가 아닐 때만
 	{
 		RootComponent->AddLocalOffset(DeltaLocation);
-		MarkPartitionDirty();
 	}
 }
 
@@ -379,14 +394,11 @@ void AActor::DuplicateSubObjects()
 	bIsPicked = false;
 	bCanEverTick = true;
 	bHiddenInGame = false;
-	bIsCulled = false;
 
 	RootComponent = RootComponent->Duplicate();
-	CollisionComponent = CollisionComponent->Duplicate();
 	TextComp = TextComp->Duplicate();
 
 	RootComponent->SetOwner(this);
-	CollisionComponent->SetOwner(this);
 	TextComp->SetOwner(this);
 
 	World = nullptr; // TODO: World를 PIE World로 할당해야 함.
@@ -399,9 +411,8 @@ void AActor::DuplicateSubObjects()
 	}*/
 
 	SceneComponents[0] = RootComponent;
-	SceneComponents[1] = CollisionComponent;
-	SceneComponents[2] = TextComp;
-	for (int i = 3; i < SceneComponents.size(); ++i)
+	SceneComponents[1] = TextComp;
+	for (int i = 2; i < SceneComponents.size(); ++i)
 	{
 		SceneComponents[i] = SceneComponents[i]->Duplicate();
 		SceneComponents[i]->SetOwner(this);

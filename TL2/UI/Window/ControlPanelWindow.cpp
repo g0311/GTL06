@@ -5,7 +5,6 @@
 #include "../Widget/TargetActorTransformWidget.h"
 #include "../Widget/ActorTerminationWidget.h"
 #include "../Widget/PrimitiveSpawnWidget.h"
-#include "../Widget/SceneIOWidget.h"
 
 //// UE_LOG 대체 매크로
 //#define UE_LOG(fmt, ...)
@@ -41,10 +40,6 @@ UControlPanelWindow::UControlPanelWindow()
 	UPrimitiveSpawnWidget* PrimitiveSpawnWidget = NewObject<UPrimitiveSpawnWidget>();
 	PrimitiveSpawnWidget->Initialize();
 	AddWidget(PrimitiveSpawnWidget);
-
-	USceneIOWidget* SceneIOWidget = NewObject<USceneIOWidget>();
-	SceneIOWidget->Initialize();
-	AddWidget(SceneIOWidget);
 
 	UCameraControlWidget* CameraControlWidget = NewObject<UCameraControlWidget>();
 	CameraControlWidget->Initialize();

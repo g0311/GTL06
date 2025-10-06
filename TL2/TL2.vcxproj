@@ -446,7 +446,7 @@
     <ClInclude Include="UI\Window\PropertyWindow.h" />
     <ClInclude Include="UI\Window\SceneWindow.h" />
     <ClInclude Include="UI\Window\UIWindow.h" />
-    <ClInclude Include="Vector.h" />
+    <ClInclude Include="Struct.h" />
     <ClInclude Include="VertexData.h" />
     <ClInclude Include="FViewport.h" />
     <ClInclude Include="EditorEngine.h" />

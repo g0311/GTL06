@@ -38,11 +38,11 @@ void UAABoundingBoxComponent::SetFromVertices(const TArray<FNormalVertex>& Verts
 
 void UAABoundingBoxComponent::Render(URenderer* Renderer, const FMatrix& ViewMatrix, const FMatrix& ProjectionMatrix)
 {
+    // ShowFlag 체크는 RenderManager에서 처리됨
     UWorld* World = GetOwner() ? GetOwner()->GetWorld() : nullptr;
-    const bool bShowBounds = World && World->GetRenderSettings().IsShowFlagEnabled(EEngineShowFlags::SF_BoundingBoxes);
     const bool bSelected = (World && World->GetSelectionManager()->GetSelectedActor() == GetOwner());
 
-    if (bShowBounds && bSelected)
+    if (bSelected)
     {
         TArray<FVector> Start;
         TArray<FVector> End;

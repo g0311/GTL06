@@ -1,6 +1,5 @@
 ﻿#pragma once
 #include "Object.h"
-#include "Vector.h"
 #include "AABoundingBoxComponent.h"
 class UWorld;
 class USceneComponent;
@@ -31,7 +30,11 @@ public:
 
     // 월드/표시
     void SetWorld(UWorld* InWorld) { World = InWorld; }
-    UWorld* GetWorld() const { return World; }
+    UWorld* GetWorld() const 
+    {
+        if (!World) assert(true);
+        return World;
+    }
 
     // 루트/컴포넌트
     void SetRootComponent(USceneComponent* InRoot);
@@ -44,18 +47,32 @@ public:
     // 씬 컴포넌트(트리/렌더용)
     const TArray<USceneComponent*>& GetSceneComponents() const { return SceneComponents; }
     
-    // 컴포넌트 생성 (템플릿)
+    // 컴포넌트 생성 (템플릿) - 생성자에서는 등록하지 않고 소유만
     template<typename T>
     T* CreateDefaultSubobject(const FName& SubobjectName)
     {
         T* Comp = ObjectFactory::NewObject<T>();
         Comp->SetOwner(this);
         // Comp->SetName(SubobjectName);  //나중에 추가 구현
-        AddOwnedComponent(Comp); // 새 모델로 합류
+        
+        // 소유권만 설정하고 등록은 나중에 (RegisterAllComponents에서)
+        OwnedComponents.insert(Comp);
+        
+        // 씬 컴포넌트면 캐시에 추가 및 루트 설정
+        if (USceneComponent* SC = Cast<USceneComponent>(Comp))
+        {
+            SceneComponents.AddUnique(SC);
+            if (!RootComponent)
+            {
+                RootComponent = SC;
+            }
+        }
+        
         return Comp;
     }
 
     // ===== 월드가 파괴 경로에서 호출할 "좁은 공개 API" =====
+    void RegisterAllComponents();  // 모든 컴포넌트를 등록 (월드 설정 후 호출)
     void UnregisterAllComponents(bool bCallEndPlayOnBegun = true);
     void DestroyAllComponents();   // Unregister 이후 최종 파괴
     void ClearSceneComponentCaches(); // SceneComponents, Root 등 정리
@@ -104,15 +121,6 @@ public:
     virtual FBound GetBounds() const { return FBound(); }
     void SetIsPicked(bool picked) { bIsPicked = picked; }
     bool GetIsPicked() { return bIsPicked; }
-    void SetCulled(bool InCulled) 
-    { 
-        bIsCulled = InCulled;
-        if (SceneComponents.empty())
-        {
-            return;
-        }
-    }
-    bool GetCulled() { return bIsCulled; }
 
     // 가시성
     void SetActorHiddenInGame(bool bNewHidden) { bHiddenInGame = bNewHidden; }
@@ -133,7 +141,6 @@ public:
 
     UWorld* World = nullptr;
     USceneComponent* RootComponent = nullptr;
-    UAABoundingBoxComponent* CollisionComponent = nullptr;
     UTextRenderComponent* TextComp = nullptr;
 
 protected:
@@ -145,7 +152,6 @@ protected:
 
     bool bIsPicked = false;
     bool bCanEverTick = true;
-    bool bIsCulled = false;
 
 
 private:

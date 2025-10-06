@@ -4,7 +4,6 @@
 #include "../../ImGui/imgui.h"
 #include "../../World.h"
 #include "../../StaticMeshActor.h"
-#include "../../Vector.h"
 #include "ObjManager.h"
 #include <algorithm>
 #include <cstdlib>
@@ -357,15 +356,6 @@ void UPrimitiveSpawnWidget::SpawnActors() const
             {
                 StaticMeshComp->SetStaticMesh(MeshPath);
 
-                // 충돌 컴포넌트 설정 (Sphere만 특례)
-                if (GetBaseNameNoExt(MeshPath) == "Sphere")
-                {
-                    Cast<AStaticMeshActor>(NewActor)->SetCollisionComponent(EPrimitiveType::Sphere);
-                }
-                else
-                {
-                    Cast<AStaticMeshActor>(NewActor)->SetCollisionComponent();
-                }
             }
 
             FString ActorName = World->GenerateUniqueActorName(

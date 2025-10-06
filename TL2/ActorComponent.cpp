@@ -56,11 +56,13 @@ void UActorComponent::UnregisterComponent()
 void UActorComponent::OnRegister()
 {
     // 리소스/핸들 생성, 메시/버퍼 생성 등(프레임 비의존)
+
 }
 
 void UActorComponent::OnUnregister()
 {
     // 리소스/핸들 반납
+
 }
 
 void UActorComponent::DestroyComponent()

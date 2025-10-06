@@ -37,9 +37,10 @@ AStaticMeshActor::~AStaticMeshActor()
 
 FBound AStaticMeshActor::GetBounds() const
 {
-    if (CollisionComponent)
+    // 컴포넌트 내장 바운즈만 사용
+    if (StaticMeshComponent)
     {
-        return CollisionComponent->GetWorldBoundFromCube();
+        return StaticMeshComponent->GetWorldAABB();
     }
     return FBound();
 }
@@ -47,12 +48,6 @@ FBound AStaticMeshActor::GetBounds() const
 void AStaticMeshActor::SetStaticMeshComponent(UStaticMeshComponent* InStaticMeshComponent)
 {
     StaticMeshComponent = InStaticMeshComponent;
-}
-
-void AStaticMeshActor::SetCollisionComponent(EPrimitiveType InType)
-{
-    CollisionComponent->SetFromVertices(StaticMeshComponent->GetStaticMesh()->GetStaticMeshAsset()->Vertices);
-    CollisionComponent->SetPrimitiveType(InType);
 }
 
 void AStaticMeshActor::DuplicateSubObjects()

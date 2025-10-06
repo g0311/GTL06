@@ -78,7 +78,7 @@ IMPLEMENT_CLASS(AGridActor)
 IMPLEMENT_CLASS(UGizmoArrowComponent)
 IMPLEMENT_CLASS(UGizmoScaleComponent)
 IMPLEMENT_CLASS(UGizmoRotateComponent)
-IMPLEMENT_CLASS(ULineComponent)
+IMPLEMENT_CLASS(UGridComponent)
 IMPLEMENT_CLASS(ULine)
 IMPLEMENT_CLASS(UTextRenderComponent)
 

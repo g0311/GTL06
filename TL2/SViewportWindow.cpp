@@ -200,17 +200,6 @@ void SViewportWindow::RenderToolbar()
 		ImGui::Text("%s", ViewportName.ToString().c_str());
 		ImGui::SameLine();
 
-		// 버튼들
-		if (ImGui::Button("Move")) { /* TODO: 이동 모드 전환 */ }
-		ImGui::SameLine();
-
-		if (ImGui::Button("Rotate")) { /* TODO: 회전 모드 전환 */ }
-		ImGui::SameLine();
-
-		if (ImGui::Button("Scale")) { /* TODO: 스케일 모드 전환 */ }
-		ImGui::SameLine();
-
-		if (ImGui::Button("Reset")) { /* TODO: 카메라 Reset */ }
 
 		const char* viewModes[] = { "Lit", "Unlit", "Wireframe" };
 		int currentViewMode = static_cast<int>(ViewportClient->GetViewModeIndex()) - 1; // 0=Lit, 1=Unlit, 2=Wireframe -1이유 1부터 시작이여서 
@@ -246,8 +235,10 @@ void SViewportWindow::RenderToolbar()
 			SLATE.SwitchPanel(this);
 		}
 
+
 		//ImGui::PopStyleVar();
 
 	}
 	ImGui::End();
 }
+

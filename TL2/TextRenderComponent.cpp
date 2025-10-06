@@ -131,10 +131,10 @@ TArray<FBillboardVertexInfo_GPU> UTextRenderComponent::CreateVerticesForString(c
 
 void UTextRenderComponent::Render(URenderer* Renderer, const FMatrix& View, const FMatrix& Proj)
 {
+    // ShowFlag 체크는 RenderManager에서 처리됨
     UWorld* World = GetOwner() ? GetOwner()->GetWorld() : nullptr;
-    const bool bShowBounds = World && World->GetRenderSettings().IsShowFlagEnabled(EEngineShowFlags::SF_BillboardText);
     const bool bSelected = (World && World->GetSelectionManager()->GetSelectedActor() == GetOwner());
-    if (!bShowBounds || !bSelected)
+    if (!bSelected)
         return;
 
     Material->Load("TextBillboard.dds", Renderer->GetRHIDevice()->GetDevice());//texture 불러오기 초기화는 ResourceManager Initialize() -> CreateTextBillboardTexture();

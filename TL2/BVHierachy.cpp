@@ -2,7 +2,8 @@
 #include "BVHierachy.h"
 #include "Actor.h"
 #include "AABoundingBoxComponent.h" // FBound helpers
-#include "Vector.h"
+#include "SceneComponent.h"
+#include "PrimitiveComponent.h"
 #include <algorithm>
 #include "Frustum.h"
 #include "Picking.h" // FRay
@@ -59,29 +60,29 @@ FBVHierachy::~FBVHierachy()
 
 void FBVHierachy::Clear()
 {
-    Actors = TArray<AActor*>();
-    ActorLastBounds = TMap<AActor*, FBound>();
-    ActorArray = TArray<AActor*>();
+    Primitives = TArray<UPrimitiveComponent*>();
+    PrimLastBounds = TMap<UPrimitiveComponent*, FBound>();
+    PrimArray = TArray<UPrimitiveComponent*>();
     Nodes = TArray<FLBVHNode>();
     Bounds = FBound();
     bPendingRebuild = false;
 
 }
 
-void FBVHierachy::Insert(AActor* InActor, const FBound& ActorBounds)
+void FBVHierachy::Insert(UPrimitiveComponent* InPrimitive, const FBound& PrimBounds)
 {
-    if (!InActor) return;
+    if (!InPrimitive) return;
 
-    ActorLastBounds.Add(InActor, ActorBounds);
+    PrimLastBounds.Add(InPrimitive, PrimBounds);
     bPendingRebuild = true;
 }
 
-void FBVHierachy::BulkInsert(const TArray<std::pair<AActor*, FBound>>& ActorsAndBounds)
+void FBVHierachy::BulkInsert(const TArray<std::pair<UPrimitiveComponent*, FBound>>& PrimsAndBounds)
 {
-    for (const auto& kv : ActorsAndBounds)
+    for (const auto& kv : PrimsAndBounds)
     {
         if (kv.first)
-            ActorLastBounds.Add(kv.first, kv.second);
+            PrimLastBounds.Add(kv.first, kv.second);
     }
 
     BuildLBVHFromMap();
@@ -93,60 +94,77 @@ bool FBVHierachy::Contains(const FBound& Box) const
     return Bounds.Contains(Box);
 }
 
-bool FBVHierachy::Remove(AActor* InActor, const FBound& ActorBounds)
+bool FBVHierachy::Remove(UPrimitiveComponent* InPrimitive, const FBound& PrimBounds)
 {
-    if (!InActor) return false;
-    bool existed = ActorLastBounds.Remove(InActor);
+    if (!InPrimitive) return false;
+    bool existed = PrimLastBounds.Remove(InPrimitive);
     bPendingRebuild = existed || bPendingRebuild;
     return existed;
 }
 
-void FBVHierachy::Update(AActor* InActor, const FBound& OldBounds, const FBound& NewBounds)
+void FBVHierachy::Update(UPrimitiveComponent* InPrimitive, const FBound& OldBounds, const FBound& NewBounds)
 {
-    if (!InActor) return;
-    ActorLastBounds.Add(InActor, NewBounds);
+    if (!InPrimitive) return;
+    PrimLastBounds.Add(InPrimitive, NewBounds);
     bPendingRebuild = true;
 }
 
 void FBVHierachy::Remove(AActor* InActor)
 {
     if (!InActor) return;
-    if (auto* Found = ActorLastBounds.Find(InActor))
+    TArray<UPrimitiveComponent*> ToRemove;
+    for (const auto& kv : PrimLastBounds)
     {
-        ActorLastBounds.Remove(InActor);
-        bPendingRebuild = true;
+        UPrimitiveComponent* Prim = kv.first;
+        if (Prim && Prim->GetOwner() == InActor)
+            ToRemove.Add(Prim);
     }
+    for (UPrimitiveComponent* Prim : ToRemove)
+        PrimLastBounds.Remove(Prim);
+    if (!ToRemove.empty()) bPendingRebuild = true;
 }
 
 void FBVHierachy::Update(AActor* InActor)
 {
-    auto it = ActorLastBounds.find(InActor);
-    if (it != ActorLastBounds.end())
+    if (!InActor) return;
+    // 동기화: 액터의 모든 PrimitiveComponent를 최신 바운즈로 추가/갱신, 사라진 것은 제거
+    TSet<UPrimitiveComponent*> Seen;
+    for (USceneComponent* SC : InActor->GetSceneComponents())
     {
-        Update(InActor, it->second, InActor->GetBounds());
+        if (UPrimitiveComponent* Prim = Cast<UPrimitiveComponent>(SC))
+        {
+            PrimLastBounds.Add(Prim, Prim->GetWorldAABB());
+            Seen.insert(Prim);
+        }
     }
-    else
+    TArray<UPrimitiveComponent*> ToRemove;
+    for (const auto& kv : PrimLastBounds)
     {
-        Insert(InActor, InActor->GetBounds());
+        UPrimitiveComponent* Prim = kv.first;
+        if (Prim && Prim->GetOwner() == InActor && !Seen.contains(Prim))
+        {
+            ToRemove.Add(Prim);
+        }
     }
+    for (UPrimitiveComponent* Prim : ToRemove)
+        PrimLastBounds.Remove(Prim);
+
+    bPendingRebuild = true;
     FlushRebuild();
 }
 
 void FBVHierachy::QueryFrustum(const Frustum& InFrustum)
 {
     if (Nodes.empty()) return;
-    //프러스텀 외부에 바운드 존재
     if (!IsAABBVisible(InFrustum, Nodes[0].Bounds)) return;
-    //프러스텀 내부에 바운드 존재 (교차 X)
     if (!IsAABBIntersects(InFrustum, Nodes[0].Bounds))
     {
-        for (AActor* A : ActorArray)
+        for (UPrimitiveComponent* Prim : PrimArray)
         {
-            if (A && ActorLastBounds.find(A) != ActorLastBounds.end()) A->SetCulled(false);
+            Prim->SetCulled(false);
         }
         return;
     }
-    //프러스텀과 바운드가 교차
     TArray<int32> IdxStack;
     IdxStack.push_back({ 0 });
 
@@ -159,14 +177,14 @@ void FBVHierachy::QueryFrustum(const Frustum& InFrustum)
         {
             for (int32 i = 0; i < node.Count; ++i)
             {
-                AActor* A = ActorArray[node.First + i];
-                if (!A || ActorLastBounds.find(A) == ActorLastBounds.end())
+                UPrimitiveComponent* Prim = PrimArray[node.First + i];
+                if (!Prim || PrimLastBounds.find(Prim) == PrimLastBounds.end())
                     continue;
-                const FBound* Cached = ActorLastBounds.Find(A);
-                const FBound Box = Cached ? *Cached : A->GetBounds();
+                const FBound* Cached = PrimLastBounds.Find(Prim);
+                const FBound Box = Cached ? *Cached : Prim->GetWorldAABB();
                 if (IsAABBVisible(InFrustum, Box))
                 {
-                    A->SetCulled(false);
+                    Prim->SetCulled(false);
                 }
             }
             continue;
@@ -229,7 +247,7 @@ int FBVHierachy::TotalNodeCount() const
 
 int FBVHierachy::TotalActorCount() const
 {
-    return static_cast<int>(ActorArray.size());
+    return static_cast<int>(PrimArray.size());
 }
 
 int FBVHierachy::MaxOccupiedDepth() const
@@ -241,7 +259,7 @@ void FBVHierachy::DebugDump() const
 {
     UE_LOG("===== BVHierachy (LBVH) DUMP BEGIN =====\r\n");
     char buf[256];
-    std::snprintf(buf, sizeof(buf), "nodes=%zu, actors=%zu\r\n", Nodes.size(), ActorArray.size());
+    std::snprintf(buf, sizeof(buf), "nodes=%zu, actors=%zu\r\n", Nodes.size(), PrimArray.size());
     UE_LOG(buf);
     for (size_t i = 0; i < Nodes.size(); ++i)
     {
@@ -290,11 +308,11 @@ namespace {
 void FBVHierachy::BuildLBVHFromMap()
 {
     // 프리미티브 수
-    ActorArray = TArray<AActor*>();
-    ActorArray.reserve(ActorLastBounds.size());
-    for (const auto& kv : ActorLastBounds) ActorArray.Add(kv.first);
+    PrimArray = TArray<UPrimitiveComponent*>();
+    PrimArray.reserve(PrimLastBounds.size());
+    for (const auto& kv : PrimLastBounds) PrimArray.Add(kv.first);
 
-    const int N = static_cast<int>(ActorArray.size());
+    const int N = static_cast<int>(PrimArray.size());
     Nodes = TArray<FLBVHNode>();
 
     if (N == 0)
@@ -304,19 +322,19 @@ void FBVHierachy::BuildLBVHFromMap()
     }
 
     // 글로벌 바운드 박스 계산
-    auto it0 = ActorLastBounds.begin();
+    auto it0 = PrimLastBounds.begin();
     Bounds = it0->second;
-    for (const auto& kv : ActorLastBounds) Bounds = UnionBounds(Bounds, kv.second);
+    for (const auto& kv : PrimLastBounds) Bounds = UnionBounds(Bounds, kv.second);
 
-    // 액터 리스트에 있는 모든 액터의 모튼 코드 계산
+    // 프리미티브들의 모튼 코드 계산
     TArray<uint32> codes;
     codes.resize(N);
     FVector gmin = Bounds.Min;
     FVector ext = Bounds.GetExtent();
     for (int i = 0; i < N; ++i)
     {
-        const FBound* b = ActorLastBounds.Find(ActorArray[i]);
-        FVector c = b ? b->GetCenter() : ActorArray[i]->GetBounds().GetCenter();
+        const FBound* b = PrimLastBounds.Find(PrimArray[i]);
+        FVector c = b ? b->GetCenter() : PrimArray[i]->GetWorldAABB().GetCenter();
         float nx = (ext.X > 0) ? (c.X - gmin.X) / (ext.X * 2.0f) : 0.5f;
         float ny = (ext.Y > 0) ? (c.Y - gmin.Y) / (ext.Y * 2.0f) : 0.5f;
         float nz = (ext.Z > 0) ? (c.Z - gmin.Z) / (ext.Z * 2.0f) : 0.5f;
@@ -329,18 +347,18 @@ void FBVHierachy::BuildLBVHFromMap()
         codes[i] = Morton3D(ix, iy, iz);
     }
 
-    // Actor와 Morton 코드를 함께 정렬
-    TArray<std::pair<AActor*, uint32>> actorCodePairs;
-    actorCodePairs.resize(N);
+    // Primitive와 Morton 코드를 함께 정렬
+    TArray<std::pair<UPrimitiveComponent*, uint32>> primCodePairs;
+    primCodePairs.resize(N);
     for (int i = 0; i < N; ++i) {
-        actorCodePairs[i] = {ActorArray[i], codes[i]};
+        primCodePairs[i] = {PrimArray[i], codes[i]};
     }
-    std::sort(actorCodePairs.begin(), actorCodePairs.end(), 
+    std::sort(primCodePairs.begin(), primCodePairs.end(), 
         [](const auto& a, const auto& b) { return a.second < b.second; });
 
     // 정렬된 결과를 ActorArray에 다시 저장
     for (int i = 0; i < N; ++i) {
-        ActorArray[i] = actorCodePairs[i].first;
+        PrimArray[i] = primCodePairs[i].first;
     }
 
     // 재귀 빌드(중앙 분할; 리프 MaxObjects)
@@ -365,7 +383,7 @@ int FBVHierachy::BuildRange(int s, int e)
         FBound acc;
         for (int i = s; i < e; ++i)
         {
-            const FBound* b = ActorLastBounds.Find(ActorArray[i]);
+            const FBound* b = PrimLastBounds.Find(PrimArray[i]);
             if (!b) continue;
             if (!inited) { acc = *b; inited = true; }
             else acc = UnionBounds(acc, *b);
@@ -385,7 +403,6 @@ int FBVHierachy::BuildRange(int s, int e)
 void FBVHierachy::QueryRayClosest(const FRay& Ray, AActor*& OutActor, OUT float& OutBestT) const
 {
     OutActor = nullptr;
-    // Respect caller-provided initial cap (e.g., far plane) if valid
     if (!(std::isfinite(OutBestT) && OutBestT > 0.0f))
     {
         OutBestT = std::numeric_limits<float>::infinity();
@@ -399,7 +416,7 @@ void FBVHierachy::QueryRayClosest(const FRay& Ray, AActor*& OutActor, OUT float&
     struct HeapItem {
         int Idx;
         float TMin;
-        bool operator<(const HeapItem& other) const { return TMin > other.TMin; } // min-heap behavior
+        bool operator<(const HeapItem& other) const { return TMin > other.TMin; }
     };
 
     std::priority_queue<HeapItem> heap;
@@ -420,12 +437,14 @@ void FBVHierachy::QueryRayClosest(const FRay& Ray, AActor*& OutActor, OUT float&
         {
             for (int i = 0; i < node.Count; ++i)
             {
-                AActor* A = ActorArray[node.First + i];
+                UPrimitiveComponent* Prim = PrimArray[node.First + i];
+                if (!Prim) continue;
+                AActor* A = Prim->GetOwner();
                 if (!A) continue;
                 if (A->GetActorHiddenInGame()) continue;
 
-                const FBound* Cached = ActorLastBounds.Find(A);
-                const FBound Box = Cached ? *Cached : A->GetBounds();
+                const FBound* Cached = PrimLastBounds.Find(Prim);
+                const FBound Box = Cached ? *Cached : Prim->GetWorldAABB();
 
                 float tmin, tmax;
                 if (!RayAABB_IntersectT(Ray, Box, tmin, tmax))
@@ -450,7 +469,6 @@ void FBVHierachy::QueryRayClosest(const FRay& Ray, AActor*& OutActor, OUT float&
         {
             break;
         }
-        // Internal node: push children if intersected and promising
         if (node.Left >= 0)
         {
             float tminL, tmaxL;

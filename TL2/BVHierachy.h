@@ -4,6 +4,8 @@
 
 struct Frustum;
 struct FRay; // forward declaration for ray type
+class UPrimitiveComponent;
+class AActor;
 
 class FBVHierachy
 {
@@ -15,15 +17,15 @@ public:
     // 초기화
     void Clear();
 
-    // 삽입 / 제거 / 갱신
-    void Insert(AActor* InActor, const FBound& ActorBounds);
-    void BulkInsert(const TArray<std::pair<AActor*, FBound>>& ActorsAndBounds);
-    bool Remove(AActor* InActor, const FBound& ActorBounds);
-    void Update(AActor* InActor, const FBound& OldBounds, const FBound& NewBounds);
+    // 삽입 / 제거 / 갱신 (컴포넌트 단위)
+    void Insert(UPrimitiveComponent* InPrimitive, const FBound& PrimBounds);
+    void BulkInsert(const TArray<std::pair<UPrimitiveComponent*, FBound>>& PrimsAndBounds);
+    bool Remove(UPrimitiveComponent* InPrimitive, const FBound& PrimBounds);
+    void Update(UPrimitiveComponent* InPrimitive, const FBound& OldBounds, const FBound& NewBounds);
 
     bool Contains(const FBound& Box) const;
 
-    // Partition Manager Interface
+    // Partition Manager Interface (액터 단위 래퍼)
     void Remove(AActor* InActor);
     void Update(AActor* InActor);
 
@@ -41,8 +43,6 @@ public:
     void DebugDump() const;
     const FBound& GetBounds() const { return Bounds; }
 
-    // 프러스텀 기준으로 오클루더(내부노드 AABB) / 오클루디(리프의 액터들) 수집
-// VP는 행벡터 기준(네 컨벤션): p' = p * VP
 private:
     static FBound UnionBounds(const FBound& A, const FBound& B);
 
@@ -66,12 +66,12 @@ private:
     int MaxObjects;
     FBound Bounds;
 
-    // 리프 페이로드(호환용): 유지하지만 트리 구조는 사용 안 함
-    TArray<AActor*> Actors;
+    // 리프 페이로드(컴포넌트)
+    TArray<UPrimitiveComponent*> Primitives;
 
-    // 액터의 마지막 바운드 캐시
-    TMap<AActor*, FBound> ActorLastBounds;
-    TArray<AActor*> ActorArray;
+    // 컴포넌트의 마지막 바운드 캐시
+    TMap<UPrimitiveComponent*, FBound> PrimLastBounds;
+    TArray<UPrimitiveComponent*> PrimArray;
 
     // LBVH nodes
     TArray<FLBVHNode> Nodes;

@@ -1,9 +1,9 @@
 ﻿#pragma once
 #include "Object.h"
-#include "Vector.h"
 
 class UPrimitiveComponent;
 class AStaticMeshActor;
+class AActor;
 
 class FOctree;
 class FBVHierachy;
@@ -21,12 +21,16 @@ public:
 	~UWorldPartitionManager();
 
 	void Clear();
-	// Actor-based API (preferred)
+	// Actor-based API (compatibility): 내부에서 컴포넌트 단위로 위임
 	void Register(AActor* Actor);
-	// 벌크 등록 - 대량 액터 처리용
-	void BulkRegister(const TArray<AActor*>& Actors);
 	void Unregister(AActor* Actor);
 	void MarkDirty(AActor* Actor);
+	// Primitive-based API (권장)
+	void Register(UPrimitiveComponent* Prim);
+	void Unregister(UPrimitiveComponent* Prim);
+	void MarkDirty(UPrimitiveComponent* Prim);
+	// 벌크 등록 - 대량 액터 처리용
+	void BulkRegister(const TArray<AActor*>& Actors);
 
 	void Update(float DeltaTime, uint32 budgetItems = 256);
 
@@ -49,8 +53,8 @@ private:
 	void ClearSceneOctree();
 	void ClearBVHierachy();
 
-	TQueue<AActor*> DirtyQueue;
-	TSet<AActor*> DirtySet;
+	TQueue<UPrimitiveComponent*> DirtyQueue;
+	TSet<UPrimitiveComponent*> DirtySet;
 	FOctree* SceneOctree = nullptr;
 	FBVHierachy* BVH = nullptr;
 };

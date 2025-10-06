@@ -201,12 +201,45 @@ void FViewportClient::MouseButtonDown(FViewport* Viewport, int32 X, int32 Y, int
 
         if (PickedActor)
         {
-            if (World) World->GetSelectionManager()->SelectActor(PickedActor);
+            USelectionManager* SelectionMgr = World->GetSelectionManager();
+            if (SelectionMgr)
+            {
+                // 이미 선택된 액터인지 확인
+                bool bIsAlreadySelected = SelectionMgr->IsActorSelected(PickedActor);
+                
+                if (bIsAlreadySelected)
+                {
+                    // 이미 선택된 액터를 다시 클릭한 경우 -> 컴포넌트 피킹 시도
+                    USceneComponent* PickedComponent = CPickingSystem::PerformComponentPicking(
+                        PickedActor, Camera, ViewportMousePos, ViewportSize, ViewportOffset, PickingAspectRatio, Viewport);
+                    
+                    if (PickedComponent)
+                    {
+                        // 컴포넌트가 피킹되었으면 컴포넌트 선택
+                        SelectionMgr->SelectComponent(PickedComponent);
+                        UE_LOG("Viewport: Selected component in actor %s", PickedActor->GetName().ToString().c_str());
+                    }
+                    else
+                    {
+                        // 컴포넌트 피킹 실패 -> 컴포넌트 선택 해제, 액터만 유지
+                        SelectionMgr->ClearComponentSelection();
+                        UE_LOG("Viewport: Cleared component selection, keeping actor %s selected", PickedActor->GetName().ToString().c_str());
+                    }
+                }
+                else
+                {
+                    // 처음 선택하는 액터 -> 액터 선택
+                    SelectionMgr->SelectActor(PickedActor);
+                    UE_LOG("Viewport: Selected actor %s", PickedActor->GetName().ToString().c_str());
+                }
+            }
+            
             UUIManager::GetInstance().SetPickedActor(PickedActor);
             if (World->GetGizmoActor())
             {
                 World->GetGizmoActor()->SetTargetActor(PickedActor);
-                World->GetGizmoActor()->SetActorLocation(PickedActor->GetActorLocation());
+                // 기즈모 위치는 이제 GizmoActor::Tick에서 SelectionManager를 통해 업데이트됨
+                // World->GetGizmoActor()->SetActorLocation(PickedActor->GetActorLocation());
             }
         }
         else

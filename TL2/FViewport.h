@@ -1,6 +1,5 @@
 ﻿#pragma once
 #include "Object.h"
-#include "Vector.h"
 #include <d3d11.h>
 
 class FViewportClient;

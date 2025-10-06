@@ -5,7 +5,6 @@
 #include "Actor.h"
 #include "GridActor.h"
 #include "World.h"
-#include "Vector.h"
 #include "GizmoActor.h"
 #include <string>
 #include "StaticMeshActor.h"    
@@ -14,6 +13,7 @@
 #include "TextRenderComponent.h"
 #include "CameraComponent.h"
 #include "BillboardComponent.h"
+#include "SelectionManager.h"
 using namespace std;
 
 
@@ -85,11 +85,6 @@ namespace
 			return true;
 		}
 
-		if (Component == Actor.CollisionComponent)
-		{
-			return true;
-		}
-
 		if (Component == Actor.TextComp)
 		{
 			return true;
@@ -151,7 +146,7 @@ namespace
 
 		// AddOwnedComponent 경유 (Register/Initialize 포함)
 		Actor.AddOwnedComponent(NewComp);
-		Actor.MarkPartitionDirty();
+		// BVH update is now handled in UPrimitiveComponent
 		return true;
 	}
 	void MarkComponentSubtreeVisited(USceneComponent* Component, TSet<USceneComponent*>& Visited)
@@ -210,6 +205,16 @@ namespace
 		if (ImGui::IsItemClicked(ImGuiMouseButton_Left))
 		{
 			SelectedComponent = Component;
+			
+			// SelectionManager에도 컴포넌트 선택 반영
+			if (UWorld* World = Actor.GetWorld())
+			{
+				USelectionManager* SelectionMgr = World->GetSelectionManager();
+				if (SelectionMgr)
+				{
+					SelectionMgr->SelectComponent(Component);
+				}
+			}
 		}
 
 		if (ImGui::BeginPopupContextItem("ComponentContext"))
@@ -301,6 +306,21 @@ USceneComponent* UTargetActorTransformWidget::GetEditingComponent() const
 	if (!SelectedActor)
 		return nullptr;
 
+	// SelectionManager에서 선택된 컴포넌트 확인
+	if (UWorld* World = SelectedActor->GetWorld())
+	{
+		USelectionManager* SelectionMgr = World->GetSelectionManager();
+		if (SelectionMgr && SelectionMgr->HasComponentSelection())
+		{
+			USceneComponent* SelectedFromMgr = SelectionMgr->GetSelectedComponent();
+			if (SelectedFromMgr)
+			{
+				// SelectionManager에서 선택된 컴포넌트가 있으면 그것을 사용
+				return SelectedFromMgr;
+			}
+		}
+	}
+
 	USceneComponent* RootComponent = SelectedActor->GetRootComponent();
 	if (!SelectedComponent || SelectedComponent == RootComponent)
 		return nullptr;
@@ -362,6 +382,24 @@ void UTargetActorTransformWidget::Update()
 
 	if (SelectedActor)
 	{
+		// SelectionManager의 컴포넌트 선택 상태 업데이트 확인
+		USceneComponent* CurrentEditingComponent = GetEditingComponent();
+		static USceneComponent* PreviousEditingComponent = nullptr;
+		
+		// 편집 대상 컴포넌트가 변경되었을 때
+		if (PreviousEditingComponent != CurrentEditingComponent)
+		{
+			UpdateTransformFromActor();
+			PrevEditRotationUI = EditRotation;
+			bRotationEditing = false;
+			
+			const FVector ScaleRef = EditScale;
+			bUniformScale = (std::fabs(ScaleRef.X - ScaleRef.Y) < 0.01f &&
+				std::fabs(ScaleRef.Y - ScaleRef.Z) < 0.01f);
+			
+			PreviousEditingComponent = CurrentEditingComponent;
+		}
+		
 		// 액터가 선택되어 있으면 항상 트랜스폼 정보를 업데이트하여
 		// 기즈모 조작을 실시간으로 UI에 반영합니다.
 		// 회전 필드 편집 중이면 그 프레임은 엔진→UI 역동기화(회전)를 막는다.
@@ -628,6 +666,25 @@ void UTargetActorTransformWidget::RenderWidget()
 		ImGui::PopStyleColor();
 		ImGui::Spacing();
 
+		// 현재 편집 중인 대상 표시
+		USceneComponent* CurrentEditingComponent = GetEditingComponent();
+		if (CurrentEditingComponent)
+		{
+			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.3f, 1.0f, 0.3f, 1.0f)); // 녹색
+			ImGui::Text("Component: %s", CurrentEditingComponent->GetName().c_str());
+			ImGui::PopStyleColor();
+			ImGui::Text("Showing relative transform to parent");
+		}
+		else
+		{
+			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.8f, 0.3f, 1.0f)); // 노란색
+			ImGui::Text("Actor: %s", CachedActorName.c_str());
+			ImGui::PopStyleColor();
+			ImGui::Text("Showing world transform");
+		}
+		ImGui::Separator();
+		ImGui::Spacing();
+
 		// Location 편집
 		if (ImGui::DragFloat3("Location", &EditLocation.X, 0.1f))
 		{
@@ -685,7 +742,7 @@ void UTargetActorTransformWidget::RenderWidget()
 					{
 						FQuat Cur = EditingComponent->GetRelativeRotation();
 						EditingComponent->SetRelativeRotation((DeltaQuat * Cur).GetNormalized());
-						if (SelectedActor) SelectedActor->MarkPartitionDirty();
+						// BVH update is now handled in UPrimitiveComponent
 					}
 					else if (SelectedActor)
 					{
@@ -702,7 +759,7 @@ void UTargetActorTransformWidget::RenderWidget()
 					if (EditingComponent)
 					{
 						EditingComponent->SetRelativeRotation(NewQ);
-						if (SelectedActor) SelectedActor->MarkPartitionDirty();
+						// BVH update is now handled in UPrimitiveComponent
 					}
 					else if (SelectedActor)
 					{
@@ -847,13 +904,6 @@ void UTargetActorTransformWidget::RenderWidget()
 						const FString& NewPath = Paths[SelectedMeshIdx];
 						TargetSMC->SetStaticMesh(NewPath);
 
-						if (AStaticMeshActor* SMActorOwner = Cast<AStaticMeshActor>(SelectedActor))
-						{
-							if (GetBaseNameNoExt(NewPath) == "Sphere")
-								SMActorOwner->SetCollisionComponent(EPrimitiveType::Sphere);
-							else
-								SMActorOwner->SetCollisionComponent();
-						}
 						const FString LogPath = ToUtf8(NewPath);
 						UE_LOG("Applied StaticMesh: %s", LogPath.c_str());
 					}
@@ -986,7 +1036,7 @@ void UTargetActorTransformWidget::ApplyTransformToActor() const
 
 		if (bDirty)
 		{
-			SelectedActor->MarkPartitionDirty();
+			// BVH update is now handled in UPrimitiveComponent
 		}
 		return;
 	}

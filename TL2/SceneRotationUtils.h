@@ -1,6 +1,5 @@
 ﻿#pragma once
 #include <cmath>
-#include "Vector.h"
 
 namespace SceneRotUtil
 {

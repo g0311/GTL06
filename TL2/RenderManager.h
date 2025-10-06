@@ -7,6 +7,11 @@ class ACameraActor;
 class FViewport;
 class FViewportClient;
 struct FCandidateDrawable;
+class UPrimitiveComponent;
+class UStaticMeshComponent;
+class UTextRenderComponent;
+class UBillboardComponent;
+class UAABoundingBoxComponent;
 
 // High-level scene rendering orchestrator extracted from UWorld
 class URenderManager : public UObject
@@ -41,6 +46,8 @@ private:
     URenderer* Renderer = nullptr;
 
     ~URenderManager() override;
+
+    bool ShouldRenderComponent(UPrimitiveComponent* Primitive) const;
 
 private:
     // ==================== CPU HZB Occlusion ====================

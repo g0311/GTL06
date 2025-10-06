@@ -2,7 +2,7 @@
 //#define UE_ENUMS_H
 #pragma once
 #include "UEContainer.h"
-//#include "Enums.h"
+#include "Struct.h"
 #include "Archive.h"
 #include <d3d11.h>
 
@@ -343,24 +343,27 @@ enum class EEngineShowFlags : uint64
 {
     None = 0,
 
-    // Primitive rendering
-    SF_Primitives = 1ull << 0,    // Show/hide all primitive geometry
-    SF_StaticMeshes = 1ull << 1,  // Show/hide static mesh actors
-    SF_Wireframe = 1ull << 2,     // Show wireframe overlay
+    // === Core Rendering Features ===
+    SF_Primitives = 1ull << 0,     // Show/hide all primitive geometry (master switch)
+    SF_Wireframe = 1ull << 1,      // Show wireframe overlay
+    SF_Lighting = 1ull << 2,       // Enable/disable lighting
 
-    // Debug features
-    SF_BillboardText = 1ull << 3, // Show/hide UUID text above objects
-    SF_BoundingBoxes = 1ull << 4, // Show/hide collision bounds
-    SF_Grid = 1ull << 5,          // Show/hide world grid
+    // === Geometry Types ===
+    SF_StaticMeshes = 1ull << 3,   // Show/hide static mesh components
+    SF_Text = 1ull << 4,           // Show/hide text render components
+    SF_Billboard = 1ull << 5,      // Show/hide billboard components
+    SF_Grid = 1ull << 6,           // Show/hide world grid
 
-    SF_OctreeDebug = 1ull << 7,  // Show/hide octree debug bounds
-    SF_BVHDebug = 1ull << 8,  // Show/hide BVH debug bounds
-    SF_Culling = 1ull << 9,          // Show/hide world grid
-    // Lighting
-    SF_Lighting = 1ull << 6,      // Enable/disable lighting
+    // === Debug/Visualization ===
+    SF_BoundingBoxes = 1ull << 7,  // Show/hide bounding boxes (selection only)
+    SF_OctreeDebug = 1ull << 8,    // Show/hide octree debug visualization
+    SF_BVHDebug = 1ull << 9,       // Show/hide BVH debug visualization
+    SF_Culling = 1ull << 10,       // Show culling debug info in console
 
-    // Default enabled flags
-    SF_DefaultEnabled = SF_Primitives | SF_StaticMeshes | SF_Grid,
+    // === Convenience Groupings ===
+    SF_DefaultEnabled = SF_Primitives | SF_StaticMeshes | SF_Text | SF_Grid | SF_Lighting,
+    SF_AllGeometry = SF_StaticMeshes | SF_Text | SF_Billboard,
+    SF_AllDebug = SF_BoundingBoxes | SF_OctreeDebug | SF_BVHDebug | SF_Culling,
 
     // All flags (for initialization/reset)
     SF_All = 0xFFFFFFFFFFFFFFFFull
