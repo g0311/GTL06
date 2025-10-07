@@ -23,6 +23,7 @@
 #include "Material.h"
 #include "Texture.h"
 #include "RenderSettings.h"
+#include "SelectionManager.h"
 #include <EditorEngine.h>
 
 // Component headers for Cast operations
@@ -49,11 +50,12 @@ URenderManager::~URenderManager()
 bool URenderManager::ShouldRenderComponent(UPrimitiveComponent* Primitive) const
 {
 	if (!Primitive || !World) return false;
+	if (!Primitive->IsActive() || Primitive->GetCulled())
+		return false;
 	
 	// 기본 Primitive 플래그 체크
 	if (!World->GetRenderSettings().IsShowFlagEnabled(EEngineShowFlags::SF_Primitives))
 		return false;
-	
 	
 	// === Mesh Components ===
 	if (UStaticMeshComponent* SMC = Cast<UStaticMeshComponent>(Primitive))
@@ -220,7 +222,6 @@ void URenderManager::RenderViewports(ACameraActor* Camera, FViewport* Viewport)
 		{
 			if (UPrimitiveComponent* Primitive = Cast<UPrimitiveComponent>(Component))
 			{
-				// 언리얼 방식: ShowFlag 기반 필터링
 				if (ShouldRenderComponent(Primitive))
 				{
 					Renderer->SetViewModeType(EffectiveViewMode);
@@ -374,6 +375,35 @@ void URenderManager::RenderViewports(ACameraActor* Camera, FViewport* Viewport)
 			Octree->DebugDraw(Renderer);
 		}
 	}
+	
+	// === 바운딩 박스 렌더링 ===
+	if (World->GetRenderSettings().IsShowFlagEnabled(EEngineShowFlags::SF_BoundingBoxes))
+	{
+		USelectionManager* SelectionMgr = World->GetSelectionManager();
+		if (SelectionMgr && SelectionMgr->HasSelection())
+		{
+			FVector4 AABBColor(1.0f, 1.0f, 0.0f, 1.0f); // AABB: 노란색
+			FVector4 OBBColor(0.0f, 0.0f, 1.0f, 1.0f);  // OBB: 파란색
+			
+			for (AActor* SelectedActor : SelectionMgr->GetSelectedActors())
+			{
+				if (!SelectedActor || SelectedActor->GetActorHiddenInGame()) continue;
+				
+				for (USceneComponent* Component : SelectedActor->GetSceneComponents())
+				{
+					if (UPrimitiveComponent* Primitive = Cast<UPrimitiveComponent>(Component))
+					{
+						// AABB (노란색 라인)
+						Primitive->AddBoundingBoxLines(Renderer, AABBColor);
+						
+						// OBB (파란색 라인)
+						Primitive->AddOrientedBoundingBoxLines(Renderer, OBBColor);
+					}
+				}
+			}
+		}
+	}
+	
 	Renderer->EndLineBatch(FMatrix::Identity(), ViewMatrix, ProjectionMatrix);
 
 	Renderer->UpdateHighLightConstantBuffer(false, rgb, 0, 0, 0, 0);
