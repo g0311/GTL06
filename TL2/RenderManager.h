@@ -48,6 +48,27 @@ private:
     ~URenderManager() override;
 
     bool ShouldRenderComponent(UPrimitiveComponent* Primitive) const;
+    
+    // === 렌더링 단계별 분리된 함수들 ===
+    void SetupRenderState(ACameraActor* Camera, FViewport* Viewport, 
+                         FMatrix& OutViewMatrix, FMatrix& OutProjectionMatrix, 
+                         Frustum& OutViewFrustum, EViewModeIndex& OutEffectiveViewMode);
+    
+    void PerformFrustumCulling(const Frustum& ViewFrustum);
+    
+    void PerformOcclusionCulling(FViewport* Viewport, const Frustum& ViewFrustum, 
+                                const FMatrix& ViewMatrix, const FMatrix& ProjectionMatrix, 
+                                float zNear, float zFar);
+    
+    void RenderGameActors(const FMatrix& ViewMatrix, const FMatrix& ProjectionMatrix, 
+                         EViewModeIndex EffectiveViewMode, int& visibleCount);
+    
+    void RenderEditorActors(const FMatrix& ViewMatrix, const FMatrix& ProjectionMatrix, 
+                           EViewModeIndex EffectiveViewMode);
+    
+    void RenderDebugVisualization();
+    
+    void RenderBoundingBoxes();
 
 private:
     // ==================== CPU HZB Occlusion ====================
