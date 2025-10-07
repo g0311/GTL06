@@ -137,13 +137,10 @@ void UTextRenderComponent::Render(URenderer* Renderer, const FMatrix& View, cons
     if (!bSelected)
         return;
 
-    Material->Load("TextBillboard.dds", Renderer->GetRHIDevice()->GetDevice());//texture 불러오기 초기화는 ResourceManager Initialize() -> CreateTextBillboardTexture();
-    ACameraActor* CameraActor = GetOwner()->GetWorld()->GetCameraActor();
-    FVector CamRight = CameraActor->GetActorRight();
-    FVector CamUp = CameraActor->GetActorUp();
-
-    FVector cameraPosition = CameraActor->GetActorLocation();
-    Renderer->UpdateBillboardConstantBuffers(Owner->GetActorLocation() + FVector(0.f, 0.f, 1.f) * Owner->GetActorScale().Z, View, Proj, CamRight, CamUp);
+    Material->Load("TextBillboard.dds", Renderer->GetRHIDevice()->GetDevice());
+    
+    // 표준 방식: 월드 매트릭스 업데이트
+    Renderer->UpdateConstantBuffer(GetWorldMatrix(), View, Proj);
 
     Renderer->PrepareShader(Material->GetShader());
     TArray<FBillboardVertexInfo_GPU> vertices = CreateVerticesForString(FString("UUID : ") + FString(std::to_string(Owner->UUID)), Owner->GetActorLocation());//TODO : HELLOWORLD를 멤버변수 TEXT로바꾸기

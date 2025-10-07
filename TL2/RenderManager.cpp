@@ -382,7 +382,9 @@ void URenderManager::RenderViewports(ACameraActor* Camera, FViewport* Viewport)
 		USelectionManager* SelectionMgr = World->GetSelectionManager();
 		if (SelectionMgr && SelectionMgr->HasSelection())
 		{
-			FVector4 BoundsColor(1.0f, 1.0f, 0.0f, 1.0f); // 노란색
+			FVector4 AABBColor(1.0f, 1.0f, 0.0f, 1.0f); // AABB: 노란색
+			FVector4 OBBColor(0.0f, 0.0f, 1.0f, 1.0f);  // OBB: 파란색
+			
 			for (AActor* SelectedActor : SelectionMgr->GetSelectedActors())
 			{
 				if (!SelectedActor || SelectedActor->GetActorHiddenInGame()) continue;
@@ -391,7 +393,11 @@ void URenderManager::RenderViewports(ACameraActor* Camera, FViewport* Viewport)
 				{
 					if (UPrimitiveComponent* Primitive = Cast<UPrimitiveComponent>(Component))
 					{
-						Primitive->AddBoundingBoxLines(Renderer, BoundsColor);
+						// AABB (노란색 라인)
+						Primitive->AddBoundingBoxLines(Renderer, AABBColor);
+						
+						// OBB (파란색 라인)
+						Primitive->AddOrientedBoundingBoxLines(Renderer, OBBColor);
 					}
 				}
 			}

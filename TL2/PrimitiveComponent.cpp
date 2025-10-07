@@ -156,6 +156,58 @@ void UPrimitiveComponent::AddBoundingBoxLines(URenderer* Renderer, const FVector
     Renderer->AddLine(Corners[3], Corners[7], Color);
 }
 
+void UPrimitiveComponent::AddOrientedBoundingBoxLines(URenderer* Renderer, const FVector4& Color)
+{
+    if (!Renderer) return;
+    
+    // 로컬 AABB 가져오기
+    FBound LocalBounds = GetLocalAABB();
+    FVector LocalMin = LocalBounds.Min;
+    FVector LocalMax = LocalBounds.Max;
+    
+    // 로컬 공간에서의 8개 코너
+    FVector LocalCorners[8] = {
+        FVector(LocalMin.X, LocalMin.Y, LocalMin.Z), // 0: 왼쪽 아래 앞
+        FVector(LocalMax.X, LocalMin.Y, LocalMin.Z), // 1: 오른쪽 아래 앞
+        FVector(LocalMax.X, LocalMax.Y, LocalMin.Z), // 2: 오른쪽 위 앞
+        FVector(LocalMin.X, LocalMax.Y, LocalMin.Z), // 3: 왼쪽 위 앞
+        FVector(LocalMin.X, LocalMin.Y, LocalMax.Z), // 4: 왼쪽 아래 뒤
+        FVector(LocalMax.X, LocalMin.Y, LocalMax.Z), // 5: 오른쪽 아래 뒤
+        FVector(LocalMax.X, LocalMax.Y, LocalMax.Z), // 6: 오른쪽 위 뒤
+        FVector(LocalMin.X, LocalMax.Y, LocalMax.Z)  // 7: 왼쪽 위 뒤
+    };
+    
+    // 월드 매트릭스로 변환해서 월드 공간에서의 OBB 코너 얻기
+    FMatrix WorldMatrix = GetWorldMatrix();
+    FVector WorldCorners[8];
+    
+    for (int i = 0; i < 8; ++i)
+    {
+        FVector4 LocalCorner4(LocalCorners[i].X, LocalCorners[i].Y, LocalCorners[i].Z, 1.0f);
+        FVector4 WorldCorner4 = LocalCorner4 * WorldMatrix;
+        WorldCorners[i] = FVector(WorldCorner4.X, WorldCorner4.Y, WorldCorner4.Z);
+    }
+    
+    // 12개 모서리 그리기 (AABB와 동일한 연결 방식)
+    // 앞면 (Z=Min)
+    Renderer->AddLine(WorldCorners[0], WorldCorners[1], Color);
+    Renderer->AddLine(WorldCorners[1], WorldCorners[2], Color);
+    Renderer->AddLine(WorldCorners[2], WorldCorners[3], Color);
+    Renderer->AddLine(WorldCorners[3], WorldCorners[0], Color);
+    
+    // 뒷면 (Z=Max)
+    Renderer->AddLine(WorldCorners[4], WorldCorners[5], Color);
+    Renderer->AddLine(WorldCorners[5], WorldCorners[6], Color);
+    Renderer->AddLine(WorldCorners[6], WorldCorners[7], Color);
+    Renderer->AddLine(WorldCorners[7], WorldCorners[4], Color);
+    
+    // 앞면과 뒷면 연결하는 수직 모서리들
+    Renderer->AddLine(WorldCorners[0], WorldCorners[4], Color);
+    Renderer->AddLine(WorldCorners[1], WorldCorners[5], Color);
+    Renderer->AddLine(WorldCorners[2], WorldCorners[6], Color);
+    Renderer->AddLine(WorldCorners[3], WorldCorners[7], Color);
+}
+
 void UPrimitiveComponent::DuplicateSubObjects()
 {
     Super::DuplicateSubObjects();

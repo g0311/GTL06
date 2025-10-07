@@ -1,13 +1,15 @@
-// C++에서 상수 버퍼를 통해 전달될 데이터
-cbuffer CameraInfo : register(b0)
+// 월드 매트릭스 상수 버퍼
+cbuffer ModelBuffer : register(b0)
 {
-    float3 textWorldPos;
-    row_major matrix viewMatrix;
-    row_major matrix projectionMatrix;
-    row_major matrix viewInverse;
-    //float3 cameraRight_worldspace;
-    //float3 cameraUp_worldspace;
-};
+    row_major float4x4 WorldMatrix;
+}
+
+// 뷰/프로젝션 매트릭스 상수 버퍼
+cbuffer ViewProjBuffer : register(b1)
+{
+    row_major float4x4 ViewMatrix;
+    row_major float4x4 ProjectionMatrix;
+}
 
 struct VS_INPUT
 {
@@ -31,17 +33,17 @@ PS_INPUT mainVS(VS_INPUT input)
 {
     PS_INPUT output;
 
-    // 고정 방향(월드 기준)으로 배치. Z가 Up인 좌표계를 가정하여
-    // 로컬 XY를 월드 XZ로 매핑해 수직 면(정면 노멀=-X)을 만든다.
-    // 더 이상 카메라를 따라 회전시키지 않음 (billboard 해제)
-    //float3 pos_aligned = float3(input.centerPos.x, 0.0f, input.centerPos.y);
-    float3 pos_aligned = float3(0.0f, input.centerPos.x, input.centerPos.y);
-    float3 finalPos_worldspace = textWorldPos + pos_aligned;
+    // 로컬 공간에서의 위치 (텍스트 배치)
+    float3 localPos = float3(input.centerPos.x, input.centerPos.y, 0.0f);
+    
+    // 로컬 -> 월드 변환
+    float4 worldPos = mul(float4(localPos, 1.0f), WorldMatrix);
+    
+    // 월드 -> 뷰 -> 프로젝션
+    float4x4 VP = mul(ViewMatrix, ProjectionMatrix);
+    output.pos_screenspace = mul(worldPos, VP);
 
-    // 월드 → 뷰 → 프로젝션
-    output.pos_screenspace = mul(float4(finalPos_worldspace, 1.0f), mul(viewMatrix, projectionMatrix)) * 0.1;
-
-    // UV는 C++에서 각 정점별로 계산해 전달됨
+    // UV는 C++에서 각 정점별로 계산해 전달띠
     output.tex = input.uvRect.xy;
 
     return output;

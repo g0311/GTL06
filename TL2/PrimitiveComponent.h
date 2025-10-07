@@ -45,6 +45,9 @@ public:
     // === 바운딩 박스 시각화 ===
     // 바운딩 박스를 라인으로 그리기 (라인 배치에 추가)
     virtual void AddBoundingBoxLines(URenderer* Renderer, const FVector4& Color = FVector4(0.0f, 1.0f, 0.0f, 1.0f));
+    
+    // OBB (회전된 바운딩 박스) 라인으로 그리기
+    virtual void AddOrientedBoundingBoxLines(URenderer* Renderer, const FVector4& Color = FVector4(0.0f, 0.0f, 1.0f, 1.0f));
 
     // ───── 복사 관련 ────────────────────────────
     void DuplicateSubObjects() override;
