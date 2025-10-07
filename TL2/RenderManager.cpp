@@ -154,108 +154,9 @@ void URenderManager::RenderViewports(ACameraActor* Camera, FViewport* Viewport)
 	// === 4. 오클루전 컴링 ===
 	PerformOcclusionCulling(Viewport, ViewFrustum, ViewMatrix, ProjectionMatrix, zNear, zFar);
 	
-	// === 5. 액터 렌더링 ===
-	RenderGameActors(ViewMatrix, ProjectionMatrix, EffectiveViewMode, visibleCount);
-
-			//MATERIALSORTING
-    {
-        //	// TODO: StaticCmp를 State tree 이용해서 렌더(showFlag 확인 필요)
-        //	if (World->GetRenderSettings().IsShowFlagEnabled(EEngineShowFlags::SF_StaticMeshes))
-        //	{
-        //		for (UStaticMesh* StaticMesh : RESOURCE.GetStaticMeshs())
-        //		{
-        //			UINT stride = 0;
-        //			stride = sizeof(FVertexDynamic);
-        //			UINT offset = 0;
-
-        //			ID3D11Buffer* VertexBuffer = StaticMesh->GetVertexBuffer();
-        //			ID3D11Buffer* IndexBuffer = StaticMesh->GetIndexBuffer();
-        //			uint32 VertexCount = StaticMesh->GetVertexCount();
-        //			uint32 IndexCount = StaticMesh->GetIndexCount();
-
-        //			URHIDevice* RHIDevice = Renderer->GetRHIDevice();
-
-        //			RHIDevice->GetDeviceContext()->IASetVertexBuffers(
-        //				0, 1, &VertexBuffer, &stride, &offset
-        //			);
-
-        //			RHIDevice->GetDeviceContext()->IASetIndexBuffer(
-        //				IndexBuffer, DXGI_FORMAT_R32_UINT, 0
-        //			);
-
-        //			RHIDevice->GetDeviceContext()->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-        //			RHIDevice->PSSetDefaultSampler(0);
-
-        //			if (StaticMesh->HasMaterial())
-        //			{
-        //				for (const FGroupInfo& GroupInfo : StaticMesh->GetMeshGroupInfo())
-        //				{
-        //					if (StaticMesh->GetUsingComponents().empty())
-        //					{
-        //						continue;
-        //					}
-        //					UMaterial* const Material = UResourceManager::GetInstance().Get<UMaterial>(GroupInfo.InitialMaterialName);
-        //					const FObjMaterialInfo& MaterialInfo = Material->GetMaterialInfo();
-        //					bool bHasTexture = !(MaterialInfo.DiffuseTextureFileName.empty());
-        //					if (bHasTexture)
-        //					{
-        //						FWideString WTextureFileName(MaterialInfo.DiffuseTextureFileName.begin(), MaterialInfo.DiffuseTextureFileName.end()); // 단순 ascii라고 가정
-        //						FTextureData* TextureData = UResourceManager::GetInstance().CreateOrGetTextureData(WTextureFileName);
-        //						RHIDevice->GetDeviceContext()->PSSetShaderResources(0, 1, &(TextureData->TextureSRV));
-        //					}
-        //					RHIDevice->UpdatePixelConstantBuffers(MaterialInfo, true, bHasTexture); // PSSet도 해줌
-
-        //					for (UStaticMeshComponent* Component : StaticMesh->GetUsingComponents())
-        //					{
-        //						if (Component->GetOwner()->GetCulled() == false && Component->IsChangedMaterialByUser() == false)
-        //						{
-        //							// ★★★ CPU 오클루전 컬링: UUID로 보임 여부 확인
-        //							if (bUseCPUOcclusion)
-        //							{
-        //								uint32_t id = Component->GetOwner()->UUID;
-        //								if (id < VisibleFlags.size() && VisibleFlags[id] == 0)
-        //								{
-        //									continue; // 가려짐 → 스킵
-        //								}
-        //							}
-
-        //							Renderer->UpdateConstantBuffer(Component->GetWorldMatrix(), ViewMatrix, ProjectionMatrix);
-        //							Renderer->PrepareShader(Component->GetMaterial()->GetShader());
-        //							RHIDevice->GetDeviceContext()->DrawIndexed(GroupInfo.IndexCount, GroupInfo.StartIndex, 0);
-        //						}
-        //					}
-        //				}
-        //			}
-        //			else
-        //			{
-
-        //				for (UStaticMeshComponent* Component : StaticMesh->GetUsingComponents())
-        //				{
-        //					if (!Component->GetOwner()->GetCulled() && !Cast<AGizmoActor>(Component->GetOwner()))
-        //					{
-        //						// ★★★ CPU 오클루전 컬링: UUID로 보임 여부 확인
-        //						if (bUseCPUOcclusion)
-        //						{
-        //							uint32_t id = Component->GetOwner()->UUID;
-        //							if (id < VisibleFlags.size() && VisibleFlags[id] == 0)
-        //							{
-        //								continue; // 가려짐 → 스킵
-        //							}
-        //						}
-
-        //						FObjMaterialInfo ObjMaterialInfo;
-        //						RHIDevice->UpdatePixelConstantBuffers(ObjMaterialInfo, false, false); // PSSet도 해줌
-
-        //						Renderer->UpdateConstantBuffer(Component->GetWorldMatrix(), ViewMatrix, ProjectionMatrix);
-        //						Renderer->PrepareShader(Component->GetMaterial()->GetShader());
-        //						RHIDevice->GetDeviceContext()->DrawIndexed(IndexCount, 0, 0);
-        //					}
-        //				}
-        //			}
-
-        //		}
-        //	}
-    }
+	// === 5. 액터 렌더링 (머티리얼 소팅 사용) ===
+    RenderGameActors(ViewMatrix, ProjectionMatrix, EffectiveViewMode, visibleCount);
+    //RenderWithMaterialSorting(ViewMatrix, ProjectionMatrix, EffectiveViewMode, visibleCount);
 
 	// === 6. 에디터 전용 액터 렌더링 ===
 	RenderEditorActors(ViewMatrix, ProjectionMatrix, EffectiveViewMode);
@@ -275,65 +176,215 @@ void URenderManager::RenderViewports(ACameraActor* Camera, FViewport* Viewport)
 	}
 }
 
-void URenderManager::UpdateOcclusionGridSizeForViewport(FViewport* Viewport)
+// ==================== Material Sorting Implementation ====================
+void URenderManager::RenderWithMaterialSorting(const FMatrix& ViewMatrix, const FMatrix& ProjectionMatrix, 
+                                               EViewModeIndex EffectiveViewMode, int& visibleCount)
 {
-    if (!Viewport) return;
-    int vw = (1 > Viewport->GetSizeX()) ? 1 : Viewport->GetSizeX();
-    int vh = (1 > Viewport->GetSizeY()) ? 1 : Viewport->GetSizeY();
-    int gw = std::max(1, vw / std::max(1, OcclGridDiv));
-    int gh = std::max(1, vh / std::max(1, OcclGridDiv));
-    // 매 프레임 호출해도 싸다. 내부에서 동일크기면 skip
-    OcclusionCPU->Initialize(gw, gh);
+    if (!World->GetRenderSettings().IsShowFlagEnabled(EEngineShowFlags::SF_Primitives))
+        return;
+        
+    // 1. 렌더 배치 수집
+    TArray<FRenderBatch> RenderBatches;
+    CollectRenderBatches(RenderBatches);
+    
+    // 2. 머티리얼별로 소팅
+    SortRenderBatches(RenderBatches);
+    
+    // 3. 배치 실행
+    ExecuteRenderBatches(RenderBatches, ViewMatrix, ProjectionMatrix, visibleCount);
 }
 
-void URenderManager::BuildCpuOcclusionSets(
-    const Frustum& ViewFrustum,
-    const FMatrix& View,
-    const FMatrix& Proj,
-    float ZNear,
-    float ZFar,
-    TArray<FCandidateDrawable>& OutOccluders,
-    TArray<FCandidateDrawable>& OutOccludees)
+void URenderManager::CollectRenderBatches(TArray<FRenderBatch>& OutBatches)
 {
-    OutOccluders.clear();
-    OutOccludees.clear();
-
-    size_t estimatedCount = 0;
+    OutBatches.clear();
+    
+    // 머티리얼별로 배치를 그룹화하기 위한 맵
+    std::unordered_map<UMaterial*, std::unordered_map<UStaticMesh*, FRenderBatch*>> BatchMap;
+    
     for (AActor* Actor : World->GetActors())
     {
-        if (Actor && !Actor->GetActorHiddenInGame())
+        if (!Actor || Actor->GetActorHiddenInGame()) continue;
+        
+        // CPU 오클루전 컴링 처리
+        if (bUseCPUOcclusion)
         {
-            if (Actor->IsA<AStaticMeshActor>()) estimatedCount++;
+            uint32_t id = Actor->UUID;
+            if (id < VisibleFlags.size() && VisibleFlags[id] == 0)
+            {
+                continue; // 가려짐 → 스킵
+            }
+        }
+        
+        for (USceneComponent* Component : Actor->GetSceneComponents())
+        {
+            UStaticMeshComponent* StaticMeshComp = Cast<UStaticMeshComponent>(Component);
+            if (!StaticMeshComp || !ShouldRenderComponent(StaticMeshComp))
+                continue;
+            
+            // 프러스텀 컴링 체크 - UPrimitiveComponent에서 상속된 GetCulled() 사용
+            if (StaticMeshComp->GetCulled()) 
+            {
+                continue; // 프러스텀 밖에 있음 → 스킵
+            }
+                
+            UStaticMesh* Mesh = StaticMeshComp->GetStaticMesh();
+            UMaterial* Material = StaticMeshComp->GetMaterial();
+            
+            if (!Mesh || !Material) continue;
+            
+            // 배치 찾기 또는 생성
+            auto& MaterialMap = BatchMap[Material];
+            FRenderBatch* Batch = MaterialMap[Mesh];
+            
+            if (!Batch)
+            {
+                // 새로운 배치 생성 - Material과 Mesh가 모두 유효함을 이미 확인
+                OutBatches.emplace_back(Material, Mesh);
+                Batch = &OutBatches.back();
+                Batch->MaterialSortKey = GenerateMaterialSortKey(Material);
+                MaterialMap[Mesh] = Batch;
+            }
+            
+            // 유효한 컴포넌트만 배치에 추가
+            Batch->Components.push_back(StaticMeshComp);
         }
     }
-    OutOccluders.reserve(estimatedCount);
-    OutOccludees.reserve(estimatedCount);
+}
 
-    const FMatrix VP = View * Proj; // 행벡터: p_world * View * Proj
+void URenderManager::SortRenderBatches(TArray<FRenderBatch>& Batches)
+{
+    // 머티리얼 소팅 키로 정렬
+    std::sort(Batches.begin(), Batches.end(), 
+        [](const FRenderBatch& a, const FRenderBatch& b) {
+            return a.MaterialSortKey < b.MaterialSortKey;
+        });
+}
 
-    for (AActor* Actor : World->GetActors())
+void URenderManager::ExecuteRenderBatches(const TArray<FRenderBatch>& Batches, const FMatrix& ViewMatrix, 
+                                         const FMatrix& ProjectionMatrix, int& visibleCount)
+{
+    UMaterial* CurrentMaterial = nullptr;
+    UStaticMesh* CurrentMesh = nullptr;
+    URHIDevice* RHIDevice = Renderer->GetRHIDevice();
+    
+    for (const FRenderBatch& Batch : Batches)
     {
-        if (!Actor) continue;
-        if (Actor->GetActorHiddenInGame()) continue;
-
-        AStaticMeshActor* SMA = Cast<AStaticMeshActor>(Actor);
-        if (!SMA) continue;
-
-        UStaticMeshComponent* SMC = SMA->GetStaticMeshComponent();
-        if (!SMC || SMC->GetCulled()) continue;
-        FBound Bound = SMC->GetWorldAABB();
-
-        OutOccluders.emplace_back();
-        FCandidateDrawable& occluder = OutOccluders.back();
-        occluder.ActorIndex = Actor->UUID;
-        occluder.Bound = Bound;
-        occluder.WorldViewProj = VP;
-        occluder.WorldView = View;
-        occluder.ZNear = ZNear;
-        occluder.ZFar = ZFar;
-
-    OutOccludees.emplace_back(occluder);
+        // 배치 유효성 체크
+        if (Batch.Components.empty() || !Batch.Material || !Batch.StaticMesh) 
+        {
+            continue; // 비어있거나 null 데이터가 있으면 스킵
+        }
+        
+        // 머티리얼 변경 처리
+        if (CurrentMaterial != Batch.Material)
+        {
+            CurrentMaterial = Batch.Material;
+            
+            // 머티리얼 설정
+            if (CurrentMaterial)
+            {
+                const FObjMaterialInfo& MaterialInfo = CurrentMaterial->GetMaterialInfo();
+                bool bHasTexture = !MaterialInfo.DiffuseTextureFileName.empty();
+                
+                if (bHasTexture)
+                {
+                    FWideString WTextureFileName(MaterialInfo.DiffuseTextureFileName.begin(), 
+                                               MaterialInfo.DiffuseTextureFileName.end());
+                    FTextureData* TextureData = UResourceManager::GetInstance().CreateOrGetTextureData(WTextureFileName);
+                    if (TextureData)
+                    {
+                        RHIDevice->GetDeviceContext()->PSSetShaderResources(0, 1, &(TextureData->TextureSRV));
+                    }
+                }
+                
+                RHIDevice->UpdatePixelConstantBuffers(MaterialInfo, true, bHasTexture);
+                Renderer->PrepareShader(CurrentMaterial->GetShader());
+            }
+        }
+        
+        // 메시 변경 처리
+        if (CurrentMesh != Batch.StaticMesh)
+        {
+            CurrentMesh = Batch.StaticMesh;
+            
+            if (CurrentMesh)
+            {
+                // 버텍스/인덱스 버퍼 설정
+                UINT stride = sizeof(FVertexDynamic);
+                UINT offset = 0;
+                
+                ID3D11Buffer* VertexBuffer = CurrentMesh->GetVertexBuffer();
+                ID3D11Buffer* IndexBuffer = CurrentMesh->GetIndexBuffer();
+                
+                RHIDevice->GetDeviceContext()->IASetVertexBuffers(0, 1, &VertexBuffer, &stride, &offset);
+                RHIDevice->GetDeviceContext()->IASetIndexBuffer(IndexBuffer, DXGI_FORMAT_R32_UINT, 0);
+                RHIDevice->GetDeviceContext()->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+                RHIDevice->PSSetDefaultSampler(0);
+            }
+        }
+        
+        // 인스턴스 렌더링 (메시가 유효할 때만)
+        if (!CurrentMesh)
+        {
+            continue; // 메시가 null이면 스킵
+        }
+        
+        for (UStaticMeshComponent* Component : Batch.Components)
+        {
+            if (!Component) continue;
+            
+            // 변환 행렬 업데이트
+            Renderer->UpdateConstantBuffer(Component->GetWorldMatrix(), ViewMatrix, ProjectionMatrix);
+            
+            // 렌더링 실행 - CurrentMesh가 이미 null 체크됨
+            if (CurrentMesh->HasMaterial())
+            {
+                for (const FGroupInfo& GroupInfo : CurrentMesh->GetMeshGroupInfo())
+                {
+                    RHIDevice->GetDeviceContext()->DrawIndexed(GroupInfo.IndexCount, GroupInfo.StartIndex, 0);
+                }
+            }
+            else
+            {
+                uint32 IndexCount = CurrentMesh->GetIndexCount();
+                RHIDevice->GetDeviceContext()->DrawIndexed(IndexCount, 0, 0);
+            }
+            
+            visibleCount++;
+        }
     }
+}
+
+int URenderManager::GenerateMaterialSortKey(UMaterial* Material) const
+{
+    if (!Material) return 0;
+    
+    // 머티리얼 속성에 기반한 소팅 키 생성
+    int SortKey = 0;
+    const FObjMaterialInfo& MaterialInfo = Material->GetMaterialInfo();
+    
+    // 1. 비투명도 (비투명 객체를 나중에 렌더링)
+    // Transparency 사용 (-1.f는 지정되지 않음을 의미)
+    bool bIsTransparent = (MaterialInfo.Transparency >= 0.0f && MaterialInfo.Transparency < 1.0f);
+    SortKey |= (bIsTransparent ? 1 : 0) << 31; // 최상위 비트
+    
+    // 2. 셰이더 포인터 기반 소팅 (셰이더 객체 자체를 해시)
+    if (Material->GetShader())
+    {
+        // 셰이더 객체의 포인터 값을 이용한 소팅
+        size_t ShaderHash = reinterpret_cast<size_t>(Material->GetShader());
+        SortKey |= ((ShaderHash >> 4) & 0xFF) << 16; // 상위 8비트 사용
+    }
+    
+    // 3. 텍스처 사용 여부
+    bool bHasTexture = !MaterialInfo.DiffuseTextureFileName.empty();
+    SortKey |= (bHasTexture ? 1 : 0) << 15;
+    
+    // 4. 머티리얼 자체의 해시값 (충돌 방지를 위해 하위 비트 사용)
+    size_t MaterialHash = std::hash<UMaterial*>{}(Material);
+    SortKey |= (MaterialHash & 0x7FFF); // 하위 15비트
+    
+    return SortKey;
 }
 
 void URenderManager::SetupRenderState(ACameraActor* Camera, FViewport* Viewport, 
@@ -447,7 +498,7 @@ void URenderManager::RenderGameActors(const FMatrix& ViewMatrix, const FMatrix& 
                     Renderer->OMSetDepthStencilState(EComparisonFunc::LessEqual);
                 }
                 
-                if (Primitive->GetCulled())
+                if (!Primitive->GetCulled())
                     visibleCount++;
             }
         }
@@ -529,5 +580,66 @@ void URenderManager::RenderBoundingBoxes()
                 Primitive->AddOrientedBoundingBoxLines(Renderer, OBBColor);
             }
         }
+    }
+}
+
+void URenderManager::UpdateOcclusionGridSizeForViewport(FViewport* Viewport)
+{
+    if (!Viewport) return;
+    int vw = (1 > Viewport->GetSizeX()) ? 1 : Viewport->GetSizeX();
+    int vh = (1 > Viewport->GetSizeY()) ? 1 : Viewport->GetSizeY();
+    int gw = std::max(1, vw / std::max(1, OcclGridDiv));
+    int gh = std::max(1, vh / std::max(1, OcclGridDiv));
+    // 매 프레임 호출해도 싸다. 내부에서 동일크기면 skip
+    OcclusionCPU->Initialize(gw, gh);
+}
+
+void URenderManager::BuildCpuOcclusionSets(
+    const Frustum& ViewFrustum,
+    const FMatrix& View,
+    const FMatrix& Proj,
+    float ZNear,
+    float ZFar,
+    TArray<FCandidateDrawable>& OutOccluders,
+    TArray<FCandidateDrawable>& OutOccludees)
+{
+    OutOccluders.clear();
+    OutOccludees.clear();
+
+    size_t estimatedCount = 0;
+    for (AActor* Actor : World->GetActors())
+    {
+        if (Actor && !Actor->GetActorHiddenInGame())
+        {
+            if (Actor->IsA<AStaticMeshActor>()) estimatedCount++;
+        }
+    }
+    OutOccluders.reserve(estimatedCount);
+    OutOccludees.reserve(estimatedCount);
+
+    const FMatrix VP = View * Proj; // 행벡터: p_world * View * Proj
+
+    for (AActor* Actor : World->GetActors())
+    {
+        if (!Actor) continue;
+        if (Actor->GetActorHiddenInGame()) continue;
+
+        AStaticMeshActor* SMA = Cast<AStaticMeshActor>(Actor);
+        if (!SMA) continue;
+
+        UStaticMeshComponent* SMC = SMA->GetStaticMeshComponent();
+        if (!SMC || SMC->GetCulled()) continue;
+        FBound Bound = SMC->GetWorldAABB();
+
+        OutOccluders.emplace_back();
+        FCandidateDrawable& occluder = OutOccluders.back();
+        occluder.ActorIndex = Actor->UUID;
+        occluder.Bound = Bound;
+        occluder.WorldViewProj = VP;
+        occluder.WorldView = View;
+        occluder.ZNear = ZNear;
+        occluder.ZFar = ZFar;
+
+        OutOccludees.emplace_back(occluder);
     }
 }

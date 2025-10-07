@@ -48,29 +48,51 @@ private:
     ~URenderManager() override;
 
     bool ShouldRenderComponent(UPrimitiveComponent* Primitive) const;
-    
+
     // === 렌더링 단계별 분리된 함수들 ===
-    void SetupRenderState(ACameraActor* Camera, FViewport* Viewport, 
-                         FMatrix& OutViewMatrix, FMatrix& OutProjectionMatrix, 
-                         Frustum& OutViewFrustum, EViewModeIndex& OutEffectiveViewMode);
-    
+    void SetupRenderState(ACameraActor* Camera, FViewport* Viewport,
+        FMatrix& OutViewMatrix, FMatrix& OutProjectionMatrix,
+        Frustum& OutViewFrustum, EViewModeIndex& OutEffectiveViewMode);
+
     void PerformFrustumCulling(const Frustum& ViewFrustum);
-    
-    void PerformOcclusionCulling(FViewport* Viewport, const Frustum& ViewFrustum, 
-                                const FMatrix& ViewMatrix, const FMatrix& ProjectionMatrix, 
-                                float zNear, float zFar);
-    
-    void RenderGameActors(const FMatrix& ViewMatrix, const FMatrix& ProjectionMatrix, 
-                         EViewModeIndex EffectiveViewMode, int& visibleCount);
-    
-    void RenderEditorActors(const FMatrix& ViewMatrix, const FMatrix& ProjectionMatrix, 
-                           EViewModeIndex EffectiveViewMode);
-    
+
+    void PerformOcclusionCulling(FViewport* Viewport, const Frustum& ViewFrustum,
+        const FMatrix& ViewMatrix, const FMatrix& ProjectionMatrix,
+        float zNear, float zFar);
+
+    void RenderGameActors(const FMatrix& ViewMatrix, const FMatrix& ProjectionMatrix,
+        EViewModeIndex EffectiveViewMode, int& visibleCount);
+
+    void RenderEditorActors(const FMatrix& ViewMatrix, const FMatrix& ProjectionMatrix,
+        EViewModeIndex EffectiveViewMode);
+
     void RenderDebugVisualization();
-    
+
     void RenderBoundingBoxes();
 
+    // === 머티리얼 소팅 렌더링 ===
+    void RenderWithMaterialSorting(const FMatrix& ViewMatrix, const FMatrix& ProjectionMatrix,
+        EViewModeIndex EffectiveViewMode, int& visibleCount);
+
 private:
+    // ==================== Material Sorting ====================
+    struct FRenderBatch
+    {
+        UMaterial* Material;
+        UStaticMesh* StaticMesh;
+        TArray<UStaticMeshComponent*> Components;
+        int MaterialSortKey; // 머티리얼 기반 정렬 키
+        
+        FRenderBatch(UMaterial* InMaterial = nullptr, UStaticMesh* InMesh = nullptr) 
+            : Material(InMaterial), StaticMesh(InMesh), MaterialSortKey(0) {}
+    };
+
+    void CollectRenderBatches(TArray<FRenderBatch>& OutBatches);
+    void SortRenderBatches(TArray<FRenderBatch>& Batches);
+    void ExecuteRenderBatches(const TArray<FRenderBatch>& Batches, const FMatrix& ViewMatrix,
+        const FMatrix& ProjectionMatrix, int& visibleCount);
+    int GenerateMaterialSortKey(UMaterial* Material) const;
+
     // ==================== CPU HZB Occlusion ====================
     void UpdateOcclusionGridSizeForViewport(FViewport* Viewport);
     void BuildCpuOcclusionSets(
