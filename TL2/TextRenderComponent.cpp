@@ -153,8 +153,13 @@ void UTextRenderComponent::Render(URenderer* Renderer, const FMatrix& View, cons
     // 텍스트 빌보드도 이 구간에서만 백페이스 컬링 비활성화
     Renderer->RSSetNoCullState();
     Renderer->DrawIndexedPrimitiveComponent(this, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    // 상태 복원
-    //Renderer->RSSetState(EViewModeIndex::VMI_Unlit);
+    // 상태 복원 - 현재 뷰 모드로 되돌리기
+    UWorld* RenderWorld = GetOwner() ? GetOwner()->GetWorld() : nullptr;
+    if (RenderWorld) 
+    {
+        EViewModeIndex CurrentViewMode = RenderWorld->GetRenderSettings().GetViewModeIndex();
+        Renderer->SetViewModeType(CurrentViewMode);
+    }
 }
 
 void UTextRenderComponent::DuplicateSubObjects()

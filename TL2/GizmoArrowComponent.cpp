@@ -75,6 +75,9 @@ void UGizmoArrowComponent::Render(URenderer* Renderer, const FMatrix& View, cons
     Renderer->OMSetBlendState(false);
     Renderer->OMSetDepthStencilState(EComparisonFunc::LessEqual);
     Renderer->SetViewModeType(saved);
+    
+    // 하이라이트 상수 버퍼도 원래 상태로 복구
+    Renderer->UpdateHighLightConstantBuffer(false, FVector(1, 1, 1), 0, 0, 0, 0);
 }
 
 UGizmoArrowComponent::~UGizmoArrowComponent()
