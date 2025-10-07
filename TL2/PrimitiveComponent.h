@@ -41,6 +41,10 @@ public:
     // 로컬 AABB 설정 헬퍼 (파생 클래스가 자신의 지오메트리에서 계산해 설정)
     void SetLocalAABB(const FBound& InLocalAABB) { LocalAABB = InLocalAABB; }
     const FBound& GetLocalAABB() const { return LocalAABB; }
+    
+    // === 바운딩 박스 시각화 ===
+    // 바운딩 박스를 라인으로 그리기 (라인 배치에 추가)
+    virtual void AddBoundingBoxLines(URenderer* Renderer, const FVector4& Color = FVector4(0.0f, 1.0f, 0.0f, 1.0f));
 
     // ───── 복사 관련 ────────────────────────────
     void DuplicateSubObjects() override;

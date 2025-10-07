@@ -6,6 +6,7 @@
 #include "AABoundingBoxComponent.h"
 #include "World.h"
 #include "WorldPartitionManager.h"
+#include "Renderer.h"
 
 void UPrimitiveComponent::SetMaterial(const FString& FilePath, EVertexLayoutType layoutType)
 {
@@ -35,8 +36,7 @@ void UPrimitiveComponent::Serialize(bool bIsLoading, FPrimitiveData& InOut)
 
 void UPrimitiveComponent::Render(URenderer* Renderer, const FMatrix& View, const FMatrix& Proj)
 {
-    if (!IsActive() || bIsCulled)
-        return;
+
 }
 
 // 월드 AABB 계산 유틸 (Arvo)
@@ -111,6 +111,49 @@ void UPrimitiveComponent::OnUnregister()
     }
     
     Super::OnUnregister();
+}
+
+void UPrimitiveComponent::AddBoundingBoxLines(URenderer* Renderer, const FVector4& Color)
+{
+    if (!Renderer) return;
+    
+    FBound WorldBounds = GetWorldAABB();
+    FVector Min = WorldBounds.Min;
+    FVector Max = WorldBounds.Max;
+    
+    // 바운딩 박스가 유효한지 확인
+    if (Min == Max) return; // 크기가 0인 바운드는 그리지 않음
+    
+    // 바운딩 박스의 8개 모서리 점
+    FVector Corners[8] = {
+        FVector(Min.X, Min.Y, Min.Z), // 0: 왼쪽 아래 앞
+        FVector(Max.X, Min.Y, Min.Z), // 1: 오른쪽 아래 앞
+        FVector(Max.X, Max.Y, Min.Z), // 2: 오른쪽 위 앞
+        FVector(Min.X, Max.Y, Min.Z), // 3: 왼쪽 위 앞
+        FVector(Min.X, Min.Y, Max.Z), // 4: 왼쪽 아래 뒤
+        FVector(Max.X, Min.Y, Max.Z), // 5: 오른쪽 아래 뒤
+        FVector(Max.X, Max.Y, Max.Z), // 6: 오른쪽 위 뒤
+        FVector(Min.X, Max.Y, Max.Z)  // 7: 왼쪽 위 뒤
+    };
+    
+    // 12개 모서리 그리기
+    // 앞면 (Z=Min)
+    Renderer->AddLine(Corners[0], Corners[1], Color);
+    Renderer->AddLine(Corners[1], Corners[2], Color);
+    Renderer->AddLine(Corners[2], Corners[3], Color);
+    Renderer->AddLine(Corners[3], Corners[0], Color);
+    
+    // 뒷면 (Z=Max)
+    Renderer->AddLine(Corners[4], Corners[5], Color);
+    Renderer->AddLine(Corners[5], Corners[6], Color);
+    Renderer->AddLine(Corners[6], Corners[7], Color);
+    Renderer->AddLine(Corners[7], Corners[4], Color);
+    
+    // 앞면과 뒷면 연결하는 수직 모서리들
+    Renderer->AddLine(Corners[0], Corners[4], Color);
+    Renderer->AddLine(Corners[1], Corners[5], Color);
+    Renderer->AddLine(Corners[2], Corners[6], Color);
+    Renderer->AddLine(Corners[3], Corners[7], Color);
 }
 
 void UPrimitiveComponent::DuplicateSubObjects()
