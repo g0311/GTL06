@@ -45,6 +45,8 @@ public:
 
     void UpdateColorBuffer(const FVector4& Color);
 
+    void UpdateViewportConstantBuffer(const FVector4& ViewportRect);
+
     void DrawIndexedPrimitiveComponent(UStaticMesh* InMesh, D3D11_PRIMITIVE_TOPOLOGY InTopology, const TArray<FMaterialSlot>& InComponentMaterialSlots);
 
     void UpdateUVScroll(const FVector2D& Speed, float TimeSec);

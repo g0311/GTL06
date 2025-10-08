@@ -121,6 +121,11 @@ void URenderer::UpdateColorBuffer(const FVector4& Color)
 	RHIDevice->UpdateColorConstantBuffers(Color);
 }
 
+void URenderer::UpdateViewportConstantBuffer(const FVector4& ViewportRect)
+{
+	RHIDevice->UpdateViewportConstantBuffers(ViewportRect);
+}
+
 void URenderer::UpdateUVScroll(const FVector2D& Speed, float TimeSec)
 {
 	RHIDevice->UpdateUVScrollConstantBuffers(Speed, TimeSec);
@@ -247,41 +252,41 @@ void URenderer::DrawIndexedPrimitiveComponent(UBillboardComponent* Comp, D3D11_P
 	RHIDevice->GetDeviceContext()->IASetVertexBuffers(0, 1, &VertexBuff, &Stride, &offset);
 	RHIDevice->GetDeviceContext()->IASetIndexBuffer(IndexBuff, DXGI_FORMAT_R32_UINT, 0);
 
-    // Bind texture via ResourceManager to support DDS/PNG
-    ID3D11ShaderResourceView* srv = nullptr;
-    if (Comp->GetMaterial())
-    {
-        const FString& TextName = Comp->GetTextureName();
-        if (!TextName.empty())
-        {
-            int needW = ::MultiByteToWideChar(CP_UTF8, 0, TextName.c_str(), -1, nullptr, 0);
-            std::wstring WTextureFileName;
-            if (needW > 0)
-            {
-                WTextureFileName.resize(needW - 1);
-                ::MultiByteToWideChar(CP_UTF8, 0, TextName.c_str(), -1, WTextureFileName.data(), needW);
-            }
-            if (FTextureData* TextureData = UResourceManager::GetInstance().CreateOrGetTextureData(WTextureFileName))
-            {
-                if (TextureData->TextureSRV)
-                {
-                    srv = TextureData->TextureSRV;
-                }
-            }
-        }
-    }
-    RHIDevice->PSSetDefaultSampler(0);
-    RHIDevice->GetDeviceContext()->PSSetShaderResources(0, 1, &srv);
+	// Bind texture via ResourceManager to support DDS/PNG
+	ID3D11ShaderResourceView* srv = nullptr;
+	if (Comp->GetMaterial())
+	{
+		const FString& TextName = Comp->GetTextureName();
+		if (!TextName.empty())
+		{
+			int needW = ::MultiByteToWideChar(CP_UTF8, 0, TextName.c_str(), -1, nullptr, 0);
+			std::wstring WTextureFileName;
+			if (needW > 0)
+			{
+				WTextureFileName.resize(needW - 1);
+				::MultiByteToWideChar(CP_UTF8, 0, TextName.c_str(), -1, WTextureFileName.data(), needW);
+			}
+			if (FTextureData* TextureData = UResourceManager::GetInstance().CreateOrGetTextureData(WTextureFileName))
+			{
+				if (TextureData->TextureSRV)
+				{
+					srv = TextureData->TextureSRV;
+				}
+			}
+		}
+	}
+	RHIDevice->PSSetDefaultSampler(0);
+	RHIDevice->GetDeviceContext()->PSSetShaderResources(0, 1, &srv);
 
-    // Ensure correct alpha blending just for this draw
-    OMSetBlendState(true);
+	// Ensure correct alpha blending just for this draw
+	OMSetBlendState(true);
 
 	RHIDevice->GetDeviceContext()->IASetPrimitiveTopology(InTopology);
 	const uint32 indexCnt = Comp->GetStaticMesh()->GetIndexCount();
 	RHIDevice->GetDeviceContext()->DrawIndexed(indexCnt, 0, 0);
 
-    // Restore blend state so others aren't affected
-    OMSetBlendState(false);
+	// Restore blend state so others aren't affected
+	OMSetBlendState(false);
 }
 void URenderer::SetViewModeType(EViewModeIndex ViewModeIndex)
 {
@@ -310,12 +315,12 @@ void URenderer::OMSetDepthStencilState(EComparisonFunc Func)
 
 void URenderer::OMSetDepthStencilStateOverlayWriteStencil()
 {
-    RHIDevice->OMSetDepthStencilState_OverlayWriteStencil();
+	RHIDevice->OMSetDepthStencilState_OverlayWriteStencil();
 }
 
 void URenderer::OMSetDepthStencilStateStencilRejectOverlay()
 {
-    RHIDevice->OMSetDepthStencilState_StencilRejectOverlay();
+	RHIDevice->OMSetDepthStencilState_StencilRejectOverlay();
 }
 
 void URenderer::InitializeLineBatch()
@@ -423,37 +428,37 @@ void URenderer::EndLineBatch(const FMatrix& ModelMatrix, const FMatrix& ViewMatr
 		LineBatchData->Indices.resize(clampedIndices);
 	}
 
-    // Efficiently update dynamic mesh data (no buffer recreation!)
-    if (!DynamicLineMesh->UpdateData(LineBatchData, RHIDevice->GetDeviceContext()))
-    {
-        bLineBatchActive = false;
-        return;
-    }
-    
-    // Set up rendering state
-    UpdateConstantBuffer(ModelMatrix, ViewMatrix, ProjectionMatrix);
-    PrepareShader(LineShader);
-    
-    // Render using dynamic mesh
-    if (DynamicLineMesh->GetCurrentVertexCount() > 0 && DynamicLineMesh->GetCurrentIndexCount() > 0)
-    {
-        UINT stride = sizeof(FVertexSimple);
-        UINT offset = 0;
-        
-        ID3D11Buffer* vertexBuffer = DynamicLineMesh->GetVertexBuffer();
-        ID3D11Buffer* indexBuffer = DynamicLineMesh->GetIndexBuffer();
-        
-        RHIDevice->GetDeviceContext()->IASetVertexBuffers(0, 1, &vertexBuffer, &stride, &offset);
-        RHIDevice->GetDeviceContext()->IASetIndexBuffer(indexBuffer, DXGI_FORMAT_R32_UINT, 0);
-        RHIDevice->GetDeviceContext()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
-        // Overlay 스텐실(=1) 영역은 그리지 않도록 스텐실 테스트 설정
-        OMSetDepthStencilStateStencilRejectOverlay();
-        RHIDevice->GetDeviceContext()->DrawIndexed(DynamicLineMesh->GetCurrentIndexCount(), 0, 0);
-        // 상태 복구
-        OMSetDepthStencilState(EComparisonFunc::LessEqual);
-    }
-    
-    bLineBatchActive = false;
+	// Efficiently update dynamic mesh data (no buffer recreation!)
+	if (!DynamicLineMesh->UpdateData(LineBatchData, RHIDevice->GetDeviceContext()))
+	{
+		bLineBatchActive = false;
+		return;
+	}
+
+	// Set up rendering state
+	UpdateConstantBuffer(ModelMatrix, ViewMatrix, ProjectionMatrix);
+	PrepareShader(LineShader);
+
+	// Render using dynamic mesh
+	if (DynamicLineMesh->GetCurrentVertexCount() > 0 && DynamicLineMesh->GetCurrentIndexCount() > 0)
+	{
+		UINT stride = sizeof(FVertexSimple);
+		UINT offset = 0;
+
+		ID3D11Buffer* vertexBuffer = DynamicLineMesh->GetVertexBuffer();
+		ID3D11Buffer* indexBuffer = DynamicLineMesh->GetIndexBuffer();
+
+		RHIDevice->GetDeviceContext()->IASetVertexBuffers(0, 1, &vertexBuffer, &stride, &offset);
+		RHIDevice->GetDeviceContext()->IASetIndexBuffer(indexBuffer, DXGI_FORMAT_R32_UINT, 0);
+		RHIDevice->GetDeviceContext()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
+		// Overlay 스텐실(=1) 영역은 그리지 않도록 스텐실 테스트 설정
+		OMSetDepthStencilStateStencilRejectOverlay();
+		RHIDevice->GetDeviceContext()->DrawIndexed(DynamicLineMesh->GetCurrentIndexCount(), 0, 0);
+		// 상태 복구
+		OMSetDepthStencilState(EComparisonFunc::LessEqual);
+	}
+
+	bLineBatchActive = false;
 }
 
 void URenderer::ClearLineBatch()

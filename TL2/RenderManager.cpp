@@ -757,7 +757,7 @@ void URenderManager::ExecuteCopyPass(const FMainRenderPassContext& Context)
     UINT NumViewports = 1;
     RHIDevice->GetDeviceContext()->RSGetViewports(&NumViewports, &OriginalViewport);
     
-    // Copy Pass용 뷰포트 설정 (백버퍼 전체 크기)
+    // Copy Pass용 뷰포트 설정 (전체 백버퍼, 셰이더에서 discard로 제어)
     UINT BackBufferWidth = RHIDevice->GetBackBufferWidth();
     UINT BackBufferHeight = RHIDevice->GetBackBufferHeight();
     
@@ -786,6 +786,20 @@ void URenderManager::ExecuteCopyPass(const FMainRenderPassContext& Context)
         // Copy Pass에서 컬링 비활성화 (풀스크린 쿼드)
         Renderer->RSSetNoCullState();
 
+        // 뷰포트 정보를 상수 버퍼로 전달 (멀티 뷰포트 지원)
+        float BackBufferWidth = static_cast<float>(RHIDevice->GetBackBufferWidth());
+        float BackBufferHeight = static_cast<float>(RHIDevice->GetBackBufferHeight());
+        
+        // 정규화된 뷰포트 좌표 (0~1 범위)
+        float ViewportX = Context.Viewport->GetStartX() / BackBufferWidth;
+        float ViewportY = Context.Viewport->GetStartY() / BackBufferHeight;
+        float ViewportWidth = Context.Viewport->GetSizeX() / BackBufferWidth;
+        float ViewportHeight = Context.Viewport->GetSizeY() / BackBufferHeight;
+        
+        // 뷰포트 상수 버퍼 업데이트
+        FVector4 ViewportRect(ViewportX, ViewportY, ViewportWidth, ViewportHeight);
+        Renderer->UpdateViewportConstantBuffer(ViewportRect);
+        
         // G-Buffer Albedo 텍스처를 셰이더 리소스로 바인딩
         ID3D11ShaderResourceView* AlbedoSRV = RHIDevice->GetGBufferAlbedoSRV();
         DeviceContext->PSSetShaderResources(0, 1, &AlbedoSRV);

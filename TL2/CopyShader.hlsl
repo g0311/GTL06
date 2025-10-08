@@ -19,6 +19,12 @@ struct PS_INPUT
 Texture2D GBufferAlbedo : register(t0);
 SamplerState LinearSampler : register(s0);
 
+// Viewport info for multi-viewport support
+cbuffer ViewportInfo : register(b1)
+{
+    float4 ViewportRect; // x, y, width, height (normalized 0-1)
+};
+
 // Fullscreen quad vertex shader
 PS_INPUT mainVS(VS_INPUT input)
 {
@@ -28,8 +34,11 @@ PS_INPUT mainVS(VS_INPUT input)
     output.position = float4(input.position, 1.0);
     
     // Position에서 UV 생성: NDC(-1~1) -> UV(0~1)
-    output.texCoord = input.position.xy * 0.5 + 0.5;
-    output.texCoord.y = 1.0 - output.texCoord.y; // Y축 뒤집기 (Direct3D UV 좌표계)
+    float2 baseUV = input.position.xy * 0.5 + 0.5;
+    baseUV.y = 1.0 - baseUV.y; // Y축 뒤집기 (Direct3D UV 좌표계)
+    
+    // G-Buffer에서 직접 샘플링 (UV 변환 없이)
+    output.texCoord = baseUV;
     
     return output;
 }
@@ -37,6 +46,16 @@ PS_INPUT mainVS(VS_INPUT input)
 // Simple copy pixel shader
 float4 mainPS(PS_INPUT input) : SV_TARGET
 {
+    // 스크린 좌표 계산 (0~1 범위)
+    float2 screenPos = input.texCoord;
+    
+    // 현재 뷰포트 영역 체크
+    if (screenPos.x < ViewportRect.x || screenPos.x > ViewportRect.x + ViewportRect.z ||
+        screenPos.y < ViewportRect.y || screenPos.y > ViewportRect.y + ViewportRect.w)
+    {
+        discard; // 뷰포트 밖의 픽셀 버리기
+    }
+    
     float4 albedo = GBufferAlbedo.Sample(LinearSampler, input.texCoord);
     return float4(albedo.rgb, 1.0);
 }

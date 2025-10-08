@@ -65,6 +65,12 @@ struct ColorBufferType
     FVector4 Color;
 };
 
+// Viewport용 상수 버퍼 (Copy Pass용)
+struct ViewportBufferType
+{
+    FVector4 ViewportRect; // x, y, width, height (normalized 0-1)
+};
+
 
 struct BillboardBufferType
 {
@@ -117,6 +123,7 @@ void D3D11RHI::Release()
     if (BillboardCB) { BillboardCB->Release(); BillboardCB = nullptr; }
     if (PixelConstCB) { PixelConstCB->Release(); PixelConstCB = nullptr; }
     if (UVScrollCB) { UVScrollCB->Release(); UVScrollCB = nullptr; }
+    if (ViewportCB) { ViewportCB->Release(); ViewportCB = nullptr; }
     if (ConstantBuffer) { ConstantBuffer->Release(); ConstantBuffer = nullptr; }
 
     // 상태 객체
@@ -401,6 +408,21 @@ void D3D11RHI::UpdateColorConstantBuffers(const FVector4& InColor)
     }
 }
 
+void D3D11RHI::UpdateViewportConstantBuffers(const FVector4& ViewportRect)
+{
+    if (!ViewportCB) return;
+    
+    D3D11_MAPPED_SUBRESOURCE mapped;
+    if (SUCCEEDED(DeviceContext->Map(ViewportCB, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped)))
+    {
+        ViewportBufferType* dataPtr = reinterpret_cast<ViewportBufferType*>(mapped.pData);
+        dataPtr->ViewportRect = ViewportRect;
+        
+        DeviceContext->Unmap(ViewportCB, 0);
+        DeviceContext->PSSetConstantBuffers(1, 1, &ViewportCB); // b1 슬롯에 바인딩
+    }
+}
+
 void D3D11RHI::IASetPrimitiveTopology()
 {
     DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -623,6 +645,14 @@ void D3D11RHI::CreateConstantBuffer()
         }
         DeviceContext->PSSetConstantBuffers(5, 1, &UVScrollCB);
     }
+    
+    // ViewportCB (멀티 뷰포트 지원용)
+    D3D11_BUFFER_DESC viewportDesc = {};
+    viewportDesc.Usage = D3D11_USAGE_DYNAMIC;
+    viewportDesc.ByteWidth = sizeof(ViewportBufferType);
+    viewportDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+    viewportDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+    Device->CreateBuffer(&viewportDesc, nullptr, &ViewportCB);
 }
 
 void D3D11RHI::UpdateUVScrollConstantBuffers(const FVector2D& Speed, float TimeSec)

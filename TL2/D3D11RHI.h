@@ -51,6 +51,7 @@ public:
     void UpdateHighLightConstantBuffers(const uint32 InPicked, const FVector& InColor, const uint32 X, const uint32 Y, const uint32 Z, const uint32 Gizmo) override;
     void UpdateColorConstantBuffers(const FVector4& InColor) override;
     void UpdateUVScrollConstantBuffers(const FVector2D& Speed, float TimeSec) override;
+    void UpdateViewportConstantBuffers(const FVector4& ViewportRect) override;
 
     void IASetPrimitiveTopology() override;
     void RSSetState(EViewModeIndex ViewModeIndex) override;
@@ -183,6 +184,7 @@ private:
     ID3D11Buffer* ColorCB{};
     ID3D11Buffer* PixelConstCB{};
     ID3D11Buffer* UVScrollCB{};
+    ID3D11Buffer* ViewportCB{};  // Copy Pass용 뷰포트 정보
 
     ID3D11Buffer* ConstantBuffer{};
 
