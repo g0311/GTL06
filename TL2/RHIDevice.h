@@ -37,12 +37,12 @@ public:
     virtual void CreateRasterizerState() = 0;
     virtual void CreateConstantBuffer() = 0;
     virtual void CreateBlendState() = 0;
-	virtual void CreateDepthStencilState() = 0;
+    virtual void CreateDepthStencilState() = 0;
     virtual void CreateShader(ID3D11InputLayout** OutSimpleInputLayout, ID3D11VertexShader** OutSimpleVertexShader, ID3D11PixelShader** OutSimplePixelShader) = 0;
 
     // update
     virtual void UpdateConstantBuffers(const FMatrix& ModelMatrix, const FMatrix& ViewMatrix, const FMatrix& ProjMatrix) = 0;
-    virtual void UpdateBillboardConstantBuffers(const FVector& pos, const FMatrix& ViewMatrix, const FMatrix& ProjMatrix, const FVector& CameraRight, const FVector& CameraUp)=0;
+    virtual void UpdateBillboardConstantBuffers(const FVector& pos, const FMatrix& ViewMatrix, const FMatrix& ProjMatrix, const FVector& CameraRight, const FVector& CameraUp) = 0;
     virtual void UpdatePixelConstantBuffers(const FObjMaterialInfo& InMaterialInfo, bool bHasMaterial, bool bHasTexture) = 0;
     virtual void UpdateHighLightConstantBuffers(const uint32 InPicked, const FVector& InColor, const uint32 X, const uint32 Y, const uint32 Z, const uint32 Gizmo) = 0;
     virtual void UpdateColorConstantBuffers(const FVector4& InColor) = 0;
@@ -65,21 +65,21 @@ public:
     virtual void OMSetDepthStencilState_StencilRejectOverlay() = 0;     // allows drawing only where stencil==0
     virtual void Present() = 0;
     virtual void PSSetDefaultSampler(UINT StartSlot) = 0;
-    
+
     // G-Buffer functions
     virtual void OMSetGBufferRenderTargets() = 0;
     virtual void OMSetBackBufferRenderTarget() = 0;
-    
+
     // G-Buffer texture getters for decal pass
     virtual ID3D11ShaderResourceView* GetGBufferAlbedoSRV() const = 0;
     virtual ID3D11ShaderResourceView* GetGBufferNormalSRV() const = 0;
     virtual ID3D11ShaderResourceView* GetGBufferDepthSRV() const = 0;
-    
+
     // G-Buffer RTV getters for clearing
     virtual ID3D11RenderTargetView* GetGBufferAlbedoRTV() const = 0;
     virtual ID3D11RenderTargetView* GetGBufferNormalRTV() const = 0;
     virtual ID3D11RenderTargetView* GetGBufferDepthRTV() const = 0;
-    
+
     // Back buffer size query (for full screen operations)
     virtual UINT GetBackBufferWidth() const = 0;
     virtual UINT GetBackBufferHeight() const = 0;

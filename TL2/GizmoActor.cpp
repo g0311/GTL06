@@ -133,22 +133,37 @@ void AGizmoActor::Tick(float DeltaSeconds)
 	if (!UIManager) UIManager = &UUIManager::GetInstance();
 
 	// 컴포넌트 활성화 상태 업데이트    
-	if ((SelectionManager->HasSelection() || SelectionManager->HasComponentSelection()) && CameraActor)
+	if (SelectionManager && (SelectionManager->HasSelection() || SelectionManager->HasComponentSelection()))
 	{
 		TargetActor = SelectionManager->GetSelectedActor();
+		
+		// SelectionManager 상태 디버깅
+		UE_LOG("[Selection Debug] HasSelection: %s, HasComponentSelection: %s\n",
+			SelectionManager->HasSelection() ? "true" : "false",
+			SelectionManager->HasComponentSelection() ? "true" : "false");
 
 		// 기즈모 위치를 선택된 객체(컴포넌트 또는 액터) 위치로 업데이트
 		if (TargetActor)
 		{
 			SetSpaceWorldMatrix(CurrentSpace, TargetActor);
+			
 			// 컴포넌트가 선택되어 있으면 컴포넌트 위치, 그렇지 않으면 액터 위치
+			USceneComponent* SelectedComp = SelectionManager->GetSelectedComponent();
+			FVector ActorPos = TargetActor->GetActorLocation();
 			FVector GizmoPosition = SelectionManager->GetSelectionLocation();
+			
+			UE_LOG("[Gizmo Debug] Target: %s, ActorPos: (%.2f, %.2f, %.2f), SelectedComp: %s, GizmoPos: (%.2f, %.2f, %.2f)\n", 
+				TargetActor->GetName().ToString().c_str(),
+				ActorPos.X, ActorPos.Y, ActorPos.Z,
+				SelectedComp ? "exists" : "nullptr",
+				GizmoPosition.X, GizmoPosition.Y, GizmoPosition.Z);
+				
 			SetActorLocation(GizmoPosition);
 		}
-	}
-	else
-	{
-		TargetActor = nullptr;
+		else
+		{
+			UE_LOG("[Gizmo Debug] TargetActor is nullptr but HasSelection/HasComponentSelection is true!\n");
+		}
 	}
 	UpdateComponentVisibility();
 }
@@ -650,7 +665,6 @@ void AGizmoActor::ProcessGizmoInteraction(ACameraActor* Camera, FViewport* Viewp
 
 	ProcessGizmoModeSwitch();
 
-	// 기즈모 드래그
 	ProcessGizmoDragging(Camera, Viewport, MousePositionX, MousePositionY);
 
 	ProcessGizmoHovering(Camera, Viewport, MousePositionX, MousePositionY);
