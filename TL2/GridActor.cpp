@@ -5,8 +5,8 @@ using std::to_string;
 
 AGridActor::AGridActor()
 {
-    LineComponent = NewObject<UGridComponent>();
-    LineComponent->SetupAttachment(RootComponent);
+    LineComponent = CreateDefaultSubobject<UGridComponent>("GridComponent");
+    RootComponent = LineComponent;
     AddOwnedComponent(LineComponent);
 }
 

@@ -14,14 +14,6 @@
 AActor::AActor()
 {
 	Name = "DefaultActor";
-	RootComponent = CreateDefaultSubobject<USceneComponent>(FName("SceneComponent"));
-	TextComp = CreateDefaultSubobject<UTextRenderComponent>("TextBox");
-
-	// TODO (동민) - 임시로 루트 컴포넌트에 붙임. 추후 계층 구조 관리 기능 구현 필요
-	if (TextComp)
-	{
-		TextComp->SetupAttachment(RootComponent);
-	}
 }
 
 AActor::~AActor()

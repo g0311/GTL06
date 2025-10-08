@@ -4,15 +4,20 @@
 #include "StaticMeshComponent.h"
 #include "ObjectFactory.h"
 #include "BillboardComponent.h"
+#include "TextRenderComponent.h"
+
 AStaticMeshActor::AStaticMeshActor()
 {
     Name = "Static Mesh Actor";
-    StaticMeshComponent = CreateDefaultSubobject<UStaticMeshComponent>("StaticMeshComponent");
-    StaticMeshComponent->SetupAttachment(RootComponent);
-    //BillboardComp = CreateDefaultSubobject<UBillboardComponent>("BillboardBox");
 
-    //StaticMeshComponent->SetOwnedActor(this);
-    //bTickInEditor = true; // 테스트 용
+    StaticMeshComponent = CreateDefaultSubobject<UStaticMeshComponent>("StaticMeshComponent");
+    RootComponent = StaticMeshComponent;
+
+    TextComp = CreateDefaultSubobject<UTextRenderComponent>("TextBox");
+    if (TextComp)
+    {
+        TextComp->SetupAttachment(RootComponent);
+    }
 }
 
 void AStaticMeshActor::Tick(float DeltaTime)

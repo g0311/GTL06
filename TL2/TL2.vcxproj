@@ -162,6 +162,7 @@
     <ClCompile Include="ActorComponent.cpp" />
     <ClCompile Include="BillboardComponent.cpp" />
     <ClCompile Include="BVHierachy.cpp" />
+    <ClCompile Include="DecalComponent.cpp" />
     <ClCompile Include="Level.cpp" />
     <ClCompile Include="MeshBVH.cpp" />
     <ClCompile Include="Occlusion.cpp" />
@@ -344,6 +345,7 @@
     <ClInclude Include="ActorComponent.h" />
     <ClInclude Include="BillboardComponent.h" />
     <ClInclude Include="BVHierachy.h" />
+    <ClInclude Include="DecalComponent.h" />
     <ClInclude Include="Level.h" />
     <ClInclude Include="MeshBVH.h" />
     <ClInclude Include="Occlusion.h" />

@@ -122,8 +122,6 @@ void UWorldPartitionManager::Unregister(AActor* Owner)
 void UWorldPartitionManager::Register(UPrimitiveComponent* Prim)
 {
 	if (!Prim) return;
-	AActor* Owner = Prim->GetOwner();
-	if (!Owner || !ShouldIndexActor(Owner)) return;
 	if (DirtySet.insert(Prim).second)
 	{
 		DirtyQueue.push(Prim);
