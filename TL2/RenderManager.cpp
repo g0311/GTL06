@@ -151,10 +151,10 @@ void URenderManager::RenderViewports(ACameraActor* Camera, FViewport* Viewport)
 	
 	Renderer->UpdateHighLightConstantBuffer(false, rgb, 0, 0, 0, 0);
 	
-	// === 4. 오클루전 컴링 ===
+	// === 4. 오클루전 컬링 ===
 	PerformOcclusionCulling(Viewport, ViewFrustum, ViewMatrix, ProjectionMatrix, zNear, zFar);
 	
-	// === 5. 액터 렌더링 (머티리얼 소팅 사용) ===
+	// === 5. 액터 렌더링 ===
     RenderGameActors(ViewMatrix, ProjectionMatrix, EffectiveViewMode, visibleCount);
     //RenderWithMaterialSorting(ViewMatrix, ProjectionMatrix, EffectiveViewMode, visibleCount);
 
