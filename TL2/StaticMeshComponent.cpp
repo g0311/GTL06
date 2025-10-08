@@ -10,7 +10,7 @@
 
 UStaticMeshComponent::UStaticMeshComponent()
 {
-    SetMaterial("StaticMeshShader.hlsl", EVertexLayoutType::PositionColorTexturNormal);
+    SetMaterial("GBufferShader.hlsl", EVertexLayoutType::PositionColorTexturNormal);
 }
 
 UStaticMeshComponent::~UStaticMeshComponent()

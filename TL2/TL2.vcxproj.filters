@@ -20,7 +20,6 @@
     <Filter Include="1. Core\Memory &amp; Resources">
       <UniqueIdentifier>{d0befaf2-bbd6-4030-a2d7-9e6f76b53ca5}</UniqueIdentifier>
     </Filter>
-    
     <!-- Rendering System -->
     <Filter Include="2. Rendering">
       <UniqueIdentifier>{1e1b6323-1900-4342-80aa-1e8764e95ab2}</UniqueIdentifier>
@@ -37,7 +36,6 @@
     <Filter Include="2. Rendering\Shaders">
       <UniqueIdentifier>{268038a8-b619-4f95-bee7-c383690b3be4}</UniqueIdentifier>
     </Filter>
-    
     <!-- Scene Management -->
     <Filter Include="3. Scene Management">
       <UniqueIdentifier>{697e0870-1798-42a4-80b5-ee94b51f6edf}</UniqueIdentifier>
@@ -45,7 +43,6 @@
     <Filter Include="3. Scene Management\Scene IO">
       <UniqueIdentifier>{89c8263c-8597-4310-a20c-847a033c26d9}</UniqueIdentifier>
     </Filter>
-    
     <!-- UI System -->
     <Filter Include="4. UI System">
       <UniqueIdentifier>{955ed923-1198-4ddc-8ed9-8c6e37023664}</UniqueIdentifier>
@@ -62,7 +59,6 @@
     <Filter Include="4. UI System\Slate Windows">
       <UniqueIdentifier>{fd5f7ea7-0345-4866-84d2-475c7f4d2937}</UniqueIdentifier>
     </Filter>
-    
     <!-- Tools & Utilities -->
     <Filter Include="5. Tools &amp; Utilities">
       <UniqueIdentifier>{a76d0b63-5c59-4ed9-9877-b9fe409cfccd}</UniqueIdentifier>
@@ -82,7 +78,6 @@
     <Filter Include="5. Tools &amp; Utilities\Archive">
       <UniqueIdentifier>{10b830a5-341c-4826-b51f-e85ad647962e}</UniqueIdentifier>
     </Filter>
-    
     <!-- Third Party -->
     <Filter Include="6. Third Party">
       <UniqueIdentifier>{9d7a6e99-f7e7-42c5-907a-f6c0e5fbff81}</UniqueIdentifier>
@@ -93,7 +88,6 @@
     <Filter Include="6. Third Party\DirectX Toolkit">
       <UniqueIdentifier>{61c8f421-d09b-4e7b-81a1-946a035ea2f3}</UniqueIdentifier>
     </Filter>
-    
     <!-- Legacy/Misc -->
     <Filter Include="9. Misc">
       <UniqueIdentifier>{474972f5-db67-4893-b1af-25c6e684ab6b}</UniqueIdentifier>
@@ -128,7 +122,6 @@
     <ClCompile Include="FName.cpp">
       <Filter>1. Core</Filter>
     </ClCompile>
-    
     <!-- Object System -->
     <ClCompile Include="Object.cpp">
       <Filter>1. Core\Object System</Filter>
@@ -151,7 +144,6 @@
     <ClCompile Include="GridActor.cpp">
       <Filter>1. Core\Object System\Actors</Filter>
     </ClCompile>
-    
     <!-- Components -->
     <ClCompile Include="ActorComponent.cpp">
       <Filter>1. Core\Object System\Components</Filter>
@@ -198,7 +190,6 @@
     <ClCompile Include="GizmoScaleComponent.cpp">
       <Filter>1. Core\Object System\Components</Filter>
     </ClCompile>
-    
     <!-- Memory &amp; Resources -->
     <ClCompile Include="ResourceManager.cpp">
       <Filter>1. Core\Memory &amp; Resources</Filter>
@@ -209,7 +200,6 @@
     <ClCompile Include="ResourceBase.cpp">
       <Filter>1. Core\Memory &amp; Resources</Filter>
     </ClCompile>
-    
     <!-- Rendering System -->
     <ClCompile Include="RHIDevice.cpp">
       <Filter>2. Rendering\RHI</Filter>
@@ -238,7 +228,6 @@
     <ClCompile Include="Occlusion.cpp">
       <Filter>2. Rendering\Renderers</Filter>
     </ClCompile>
-    
     <!-- Rendering Resources -->
     <ClCompile Include="StaticMesh.cpp">
       <Filter>2. Rendering\Resources</Filter>
@@ -270,12 +259,10 @@
     <ClCompile Include="MeshLoader.cpp">
       <Filter>2. Rendering\Resources</Filter>
     </ClCompile>
-    
     <!-- Scene Management -->
     <ClCompile Include="SceneLoader.cpp">
       <Filter>3. Scene Management\Scene IO</Filter>
     </ClCompile>
-    
     <!-- UI System -->
     <ClCompile Include="UI\UIManager.cpp">
       <Filter>4. UI System\Managers</Filter>
@@ -289,7 +276,6 @@
     <ClCompile Include="UI\ImGui\ImGuiHelper.cpp">
       <Filter>4. UI System\Managers</Filter>
     </ClCompile>
-    
     <!-- UI Windows -->
     <ClCompile Include="UI\Window\UIWindow.cpp">
       <Filter>4. UI System\Windows</Filter>
@@ -312,7 +298,6 @@
     <ClCompile Include="UI\Factory\UIWindowFactory.cpp">
       <Filter>4. UI System\Windows</Filter>
     </ClCompile>
-    
     <!-- UI Widgets -->
     <ClCompile Include="UI\Widget\Widget.cpp">
       <Filter>4. UI System\Widgets</Filter>
@@ -353,7 +338,6 @@
     <ClCompile Include="MenuBarWidget.cpp">
       <Filter>4. UI System\Widgets</Filter>
     </ClCompile>
-    
     <!-- Slate Windows -->
     <ClCompile Include="SViewportWindow.cpp">
       <Filter>4. UI System\Slate Windows</Filter>
@@ -382,7 +366,6 @@
     <ClCompile Include="SControlPanel.cpp">
       <Filter>4. UI System\Slate Windows</Filter>
     </ClCompile>
-    
     <!-- Tools &amp; Utilities - Spatial -->
     <ClCompile Include="Octree.cpp">
       <Filter>5. Tools &amp; Utilities\Spatial</Filter>
@@ -396,7 +379,6 @@
     <ClCompile Include="MeshBVH.cpp">
       <Filter>5. Tools &amp; Utilities\Spatial</Filter>
     </ClCompile>
-    
     <!-- Tools &amp; Utilities - Input &amp; Interaction -->
     <ClCompile Include="InputManager.cpp">
       <Filter>5. Tools &amp; Utilities\Input &amp; Interaction</Filter>
@@ -410,12 +392,10 @@
     <ClCompile Include="ObjManager.cpp">
       <Filter>5. Tools &amp; Utilities\Input &amp; Interaction</Filter>
     </ClCompile>
-    
     <!-- Tools &amp; Utilities - Platform -->
     <ClCompile Include="PlatformTime.cpp">
       <Filter>5. Tools &amp; Utilities\Platform</Filter>
     </ClCompile>
-    
     <!-- Third Party - ImGui -->
     <ClCompile Include="ImGui\imgui.cpp">
       <Filter>6. Third Party\ImGui</Filter>
@@ -458,6 +438,15 @@
     <FxCompile Include="Billboard.hlsl">
       <Filter>2. Rendering\Shaders</Filter>
     </FxCompile>
+    <FxCompile Include="CopyShader.hlsl">
+      <Filter>2. Rendering\Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="DecalShader.hlsl">
+      <Filter>2. Rendering\Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="GBufferShader.hlsl">
+      <Filter>2. Rendering\Shaders</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <!-- Core Engine Headers -->
@@ -491,7 +480,6 @@
     <ClInclude Include="ObjectIterator.h">
       <Filter>1. Core</Filter>
     </ClInclude>
-    
     <!-- Object System Headers -->
     <ClInclude Include="Object.h">
       <Filter>1. Core\Object System</Filter>
@@ -514,7 +502,6 @@
     <ClInclude Include="GridActor.h">
       <Filter>1. Core\Object System\Actors</Filter>
     </ClInclude>
-    
     <!-- Component Headers -->
     <ClInclude Include="ActorComponent.h">
       <Filter>1. Core\Object System\Components</Filter>
@@ -561,7 +548,6 @@
     <ClInclude Include="GizmoScaleComponent.h">
       <Filter>1. Core\Object System\Components</Filter>
     </ClInclude>
-    
     <!-- Memory &amp; Resources Headers -->
     <ClInclude Include="ResourceManager.h">
       <Filter>1. Core\Memory &amp; Resources</Filter>
@@ -572,7 +558,6 @@
     <ClInclude Include="ResourceBase.h">
       <Filter>1. Core\Memory &amp; Resources</Filter>
     </ClInclude>
-    
     <!-- Rendering System Headers -->
     <ClInclude Include="RHIDevice.h">
       <Filter>2. Rendering\RHI</Filter>
@@ -601,7 +586,6 @@
     <ClInclude Include="Occlusion.h">
       <Filter>2. Rendering\Renderers</Filter>
     </ClInclude>
-    
     <!-- Rendering Resources Headers -->
     <ClInclude Include="StaticMesh.h">
       <Filter>2. Rendering\Resources</Filter>
@@ -642,7 +626,6 @@
     <ClInclude Include="Sphere.h">
       <Filter>2. Rendering\Resources</Filter>
     </ClInclude>
-    
     <!-- Scene Management Headers -->
     <ClInclude Include="SceneLoader.h">
       <Filter>3. Scene Management\Scene IO</Filter>
@@ -650,7 +633,6 @@
     <ClInclude Include="SceneRotationUtils.h">
       <Filter>3. Scene Management\Scene IO</Filter>
     </ClInclude>
-    
     <!-- UI System Headers -->
     <ClInclude Include="UI\UIManager.h">
       <Filter>4. UI System\Managers</Filter>
@@ -664,7 +646,6 @@
     <ClInclude Include="UI\ImGui\ImGuiHelper.h">
       <Filter>4. UI System\Managers</Filter>
     </ClInclude>
-    
     <!-- UI Windows Headers -->
     <ClInclude Include="UI\Window\UIWindow.h">
       <Filter>4. UI System\Windows</Filter>
@@ -687,7 +668,6 @@
     <ClInclude Include="UI\Factory\UIWindowFactory.h">
       <Filter>4. UI System\Windows</Filter>
     </ClInclude>
-    
     <!-- UI Widgets Headers -->
     <ClInclude Include="UI\Widget\Widget.h">
       <Filter>4. UI System\Widgets</Filter>
@@ -728,7 +708,6 @@
     <ClInclude Include="MenuBarWidget.h">
       <Filter>4. UI System\Widgets</Filter>
     </ClInclude>
-    
     <!-- Slate Windows Headers -->
     <ClInclude Include="SViewportWindow.h">
       <Filter>4. UI System\Slate Windows</Filter>
@@ -757,12 +736,10 @@
     <ClInclude Include="SControlPanel.h">
       <Filter>4. UI System\Slate Windows</Filter>
     </ClInclude>
-    
     <!-- Tools &amp; Utilities - Math Headers -->
     <ClInclude Include="Struct.h">
       <Filter>5. Tools &amp; Utilities\Math</Filter>
     </ClInclude>
-    
     <!-- Tools &amp; Utilities - Spatial Headers -->
     <ClInclude Include="Octree.h">
       <Filter>5. Tools &amp; Utilities\Spatial</Filter>
@@ -776,7 +753,6 @@
     <ClInclude Include="MeshBVH.h">
       <Filter>5. Tools &amp; Utilities\Spatial</Filter>
     </ClInclude>
-    
     <!-- Tools &amp; Utilities - Input &amp; Interaction Headers -->
     <ClInclude Include="InputManager.h">
       <Filter>5. Tools &amp; Utilities\Input &amp; Interaction</Filter>
@@ -790,12 +766,10 @@
     <ClInclude Include="ObjManager.h">
       <Filter>5. Tools &amp; Utilities\Input &amp; Interaction</Filter>
     </ClInclude>
-    
     <!-- Tools &amp; Utilities - Platform Headers -->
     <ClInclude Include="PlatformTime.h">
       <Filter>5. Tools &amp; Utilities\Platform</Filter>
     </ClInclude>
-    
     <!-- Tools &amp; Utilities - Archive Headers -->
     <ClInclude Include="Archive.h">
       <Filter>5. Tools &amp; Utilities\Archive</Filter>
@@ -806,7 +780,6 @@
     <ClInclude Include="WindowsBinReader.h">
       <Filter>5. Tools &amp; Utilities\Archive</Filter>
     </ClInclude>
-    
     <!-- Third Party - ImGui Headers -->
     <ClInclude Include="ImGui\imconfig.h">
       <Filter>6. Third Party\ImGui</Filter>

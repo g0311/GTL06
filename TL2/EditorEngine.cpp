@@ -1,7 +1,8 @@
 ﻿#include "pch.h"
 #include "EditorEngine.h"
 #include "USlateManager.h"
-#include <ObjManager.h>
+#include "ObjManager.h"
+#include "RenderManager.h"
 
 float UEditorEngine::ClientWidth = 1024.0f;
 float UEditorEngine::ClientHeight = 1024.0f;
@@ -185,6 +186,9 @@ bool UEditorEngine::Startup(HINSTANCE hInstance)
 
     //스폰을 위한 월드셋
     UI.SetWorld(WorldContexts[0].World);
+    
+    // RenderManager에 Renderer 설정
+    RENDER.Initialize(WorldContexts[0].World, Renderer.get());
 
     bRunning = true;
     return true;

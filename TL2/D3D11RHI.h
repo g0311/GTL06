@@ -57,6 +57,22 @@ public:
     void RSSetViewport() override;
     void OMSetRenderTargets() override;
     void OMSetBlendState(bool bIsBlendMode) override;
+    
+    // G-Buffer functions
+    void CreateGBuffer();
+    void ReleaseGBuffer();
+    void OMSetGBufferRenderTargets() override;
+    void OMSetBackBufferRenderTarget() override;
+    
+    // G-Buffer texture getters for decal pass
+    ID3D11ShaderResourceView* GetGBufferAlbedoSRV() const override { return GBufferAlbedoSRV; }
+    ID3D11ShaderResourceView* GetGBufferNormalSRV() const override { return GBufferNormalSRV; }
+    ID3D11ShaderResourceView* GetGBufferDepthSRV() const override { return GBufferDepthSRV; }
+    
+    // G-Buffer RTV getters for clearing
+    ID3D11RenderTargetView* GetGBufferAlbedoRTV() const override { return GBufferAlbedoRTV; }
+    ID3D11RenderTargetView* GetGBufferNormalRTV() const override { return GBufferNormalRTV; }
+    ID3D11RenderTargetView* GetGBufferDepthRTV() const override { return GBufferDepthRTV; }
     void Present() override;
 	void PSSetDefaultSampler(UINT StartSlot) override;
     void RSSetNoCullState() override;
@@ -80,6 +96,10 @@ public:
     // Viewport query
     UINT GetViewportWidth() const { return (UINT)ViewportInfo.Width; }
     UINT GetViewportHeight() const { return (UINT)ViewportInfo.Height; }
+    
+    // Back buffer size query (actual swap chain buffer size)
+    UINT GetBackBufferWidth() const override;
+    UINT GetBackBufferHeight() const override;
 
 public:
     // getter
@@ -141,6 +161,19 @@ private:
     ID3D11Texture2D* FrameBuffer{};//
     ID3D11RenderTargetView* RenderTargetView{};//
     ID3D11DepthStencilView* DepthStencilView{};//
+    
+    // G-Buffer textures and views
+    ID3D11Texture2D* GBufferAlbedoTexture = nullptr;     // RT0: Albedo (RGBA8)
+    ID3D11Texture2D* GBufferNormalTexture = nullptr;     // RT1: World Normal (RGBA8)
+    ID3D11Texture2D* GBufferDepthTexture = nullptr;      // RT2: Linear Depth (R32F)
+    
+    ID3D11RenderTargetView* GBufferAlbedoRTV = nullptr;
+    ID3D11RenderTargetView* GBufferNormalRTV = nullptr;
+    ID3D11RenderTargetView* GBufferDepthRTV = nullptr;
+    
+    ID3D11ShaderResourceView* GBufferAlbedoSRV = nullptr;
+    ID3D11ShaderResourceView* GBufferNormalSRV = nullptr;
+    ID3D11ShaderResourceView* GBufferDepthSRV = nullptr;
 
     // 버퍼 핸들
     ID3D11Buffer* ModelCB{};

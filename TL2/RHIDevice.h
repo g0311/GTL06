@@ -64,6 +64,24 @@ public:
     virtual void OMSetDepthStencilState_StencilRejectOverlay() = 0;     // allows drawing only where stencil==0
     virtual void Present() = 0;
     virtual void PSSetDefaultSampler(UINT StartSlot) = 0;
+    
+    // G-Buffer functions
+    virtual void OMSetGBufferRenderTargets() = 0;
+    virtual void OMSetBackBufferRenderTarget() = 0;
+    
+    // G-Buffer texture getters for decal pass
+    virtual ID3D11ShaderResourceView* GetGBufferAlbedoSRV() const = 0;
+    virtual ID3D11ShaderResourceView* GetGBufferNormalSRV() const = 0;
+    virtual ID3D11ShaderResourceView* GetGBufferDepthSRV() const = 0;
+    
+    // G-Buffer RTV getters for clearing
+    virtual ID3D11RenderTargetView* GetGBufferAlbedoRTV() const = 0;
+    virtual ID3D11RenderTargetView* GetGBufferNormalRTV() const = 0;
+    virtual ID3D11RenderTargetView* GetGBufferDepthRTV() const = 0;
+    
+    // Back buffer size query (for full screen operations)
+    virtual UINT GetBackBufferWidth() const = 0;
+    virtual UINT GetBackBufferHeight() const = 0;
 };
 
 

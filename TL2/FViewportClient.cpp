@@ -51,7 +51,7 @@ void FViewportClient::Draw(FViewport* Viewport)
           if (World)
           {
               World->GetRenderSettings().SetViewModeIndex(ViewModeIndex);
-              RENDER.Render(World, Viewport);
+              RENDER.RenderViewports(Camera, Viewport);
           }
         break;
     }
@@ -67,7 +67,7 @@ void FViewportClient::Draw(FViewport* Viewport)
         if (World)
         {
             World->GetRenderSettings().SetViewModeIndex(ViewModeIndex);
-            RENDER.Render(World, Viewport);
+            RENDER.RenderViewports(Camera, Viewport);
         }
         break;
     }

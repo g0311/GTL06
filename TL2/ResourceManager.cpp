@@ -43,9 +43,9 @@ void UResourceManager::Initialize(ID3D11Device* InDevice, ID3D11DeviceContext* I
 
     CreateTextBillboardMesh();//"TextBillboard"
     CreateBillboardMesh(); // Billboard
+    CreateFullscreenQuad(); // Copy Pass용 NDC 쿼드
     CreateTextBillboardTexture();
     CreateDefaultShader();
-    
 }
 
 UMaterial* UResourceManager::GetOrCreateMaterial(const FString& Name, EVertexLayoutType layoutType)
@@ -306,6 +306,61 @@ void UResourceManager::CreateBillboardMesh()
     UMeshLoader::GetInstance().AddMeshData("BillboardQuad", BillboardData);
 }
 
+// Copy Pass용 풀스크린 NDC 쿼드 생성
+void UResourceManager::CreateFullscreenQuad()
+{
+    // 이미 있으면 패스
+    if (Get<UStaticMesh>("FullscreenQuad"))
+    {
+        return;
+    }
+
+    // 쿼드 인덱스 (삼각형 2개) - 올바른 순서로 수정
+    TArray<uint32> Indices;
+    Indices.push_back(0); Indices.push_back(2); Indices.push_back(1); // 첫 번째 삼각형 (CW)
+    Indices.push_back(0); Indices.push_back(3); Indices.push_back(2); // 두 번째 삼각형 (CW)
+
+    // 메시 데이터 준비
+    FMeshData* FullscreenData = new FMeshData;
+    FullscreenData->Indices = Indices;
+
+    // NDC 좌표계 (-1~1) 범위 풀스크린 쿼드 정점 4개 (PositionColorTexturNormal 레이아웃)
+    FullscreenData->Vertices.resize(4);
+    FullscreenData->Color.resize(4);
+    FullscreenData->UV.resize(4);
+    FullscreenData->Normal.resize(4);
+
+    // NDC 좌표계 정점
+    FullscreenData->Vertices[0] = { -1.0f, -1.0f, 0.0f }; // left-bottom
+    FullscreenData->Vertices[1] = {  1.0f, -1.0f, 0.0f }; // right-bottom
+    FullscreenData->Vertices[2] = {  1.0f,  1.0f, 0.0f }; // right-top
+    FullscreenData->Vertices[3] = { -1.0f,  1.0f, 0.0f }; // left-top
+    
+    // 색상 데이터
+    for (int i = 0; i < 4; i++)
+        FullscreenData->Color[i] = { 1.0f, 1.0f, 1.0f, 1.0f };
+    
+    // UV 좌표 (더미 데이터, CopyShader에서 Position에서 계산)
+    FullscreenData->UV[0] = { 0.0f, 1.0f }; // left-bottom
+    FullscreenData->UV[1] = { 1.0f, 1.0f }; // right-bottom
+    FullscreenData->UV[2] = { 1.0f, 0.0f }; // right-top
+    FullscreenData->UV[3] = { 0.0f, 0.0f }; // left-top
+    
+    // Normal 데이터 (더미)
+    for (int i = 0; i < 4; i++)
+        FullscreenData->Normal[i] = { 0.0f, 0.0f, 1.0f };
+
+    // GPU 리소스 생성 (PositionColorTexturNormal 레이아웃으로 변경)
+    UStaticMesh* Mesh = NewObject<UStaticMesh>();
+    Mesh->Load(FullscreenData, Device, EVertexLayoutType::PositionColorTexturNormal);
+
+    // 리소스 매니저에 등록
+    Add<UStaticMesh>("FullscreenQuad", Mesh);
+
+    // CPU 데이터 캐싱
+    UMeshLoader::GetInstance().AddMeshData("FullscreenQuad", FullscreenData);
+}
+
 void UResourceManager::CreateGridMesh(int N, const FString& FilePath)
 {
     if (ResourceMap[FilePath])
@@ -460,6 +515,10 @@ void UResourceManager::CreateDefaultShader()
     Load<UShader>("StaticMeshShader.hlsl", EVertexLayoutType::PositionColorTexturNormal);
     Load<UShader>("TextBillboard.hlsl", EVertexLayoutType::PositionTextBillBoard);
     Load<UShader>("Billboard.hlsl", EVertexLayoutType::PositionBillBoard);
+    // Load G-Buffer shader for deferred rendering
+    Load<UShader>("GBufferShader.hlsl", EVertexLayoutType::PositionColorTexturNormal);
+    // Load Copy shader for G-Buffer to back buffer copy
+    Load<UShader>("CopyShader.hlsl", EVertexLayoutType::PositionColor);
 }
 
 void UResourceManager::InitShaderILMap()
@@ -477,6 +536,8 @@ void UResourceManager::InitShaderILMap()
     layout.Add({ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 32, D3D11_INPUT_PER_VERTEX_DATA, 0 });
     layout.Add({ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 48, D3D11_INPUT_PER_VERTEX_DATA, 0 });
     ShaderToInputLayoutMap["StaticMeshShader.hlsl"] = layout;
+    ShaderToInputLayoutMap["GBufferShader.hlsl"] = layout;  // G-Buffer shader uses same layout
+    ShaderToInputLayoutMap["CopyShader.hlsl"] = layout;     // CopyShader uses same layout
     layout.clear();
 
     layout.Add({ "WORLDPOSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 });
@@ -494,6 +555,17 @@ void UResourceManager::InitShaderILMap()
                  D3D11_INPUT_PER_VERTEX_DATA, 0 });
     ShaderToInputLayoutMap["Billboard.hlsl"] = layout;
     layout.clear();
+    
+    // ────────────────────────────────
+    // Decal Shader (Position + TexCoord for fullscreen quad)
+    // ────────────────────────────────
+    layout.Add({ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0,
+                 D3D11_INPUT_PER_VERTEX_DATA, 0 });
+    layout.Add({ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12,
+                 D3D11_INPUT_PER_VERTEX_DATA, 0 });
+    ShaderToInputLayoutMap["DecalShader.hlsl"] = layout;
+    layout.clear();
+    
 }
 
 TArray<D3D11_INPUT_ELEMENT_DESC>& UResourceManager::GetProperInputLayout(const FString& InShaderName)

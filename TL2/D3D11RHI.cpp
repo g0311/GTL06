@@ -81,12 +81,13 @@ void D3D11RHI::Initialize(HWND hWindow)
     // 이곳에서 Device, DeviceContext, viewport, swapchain를 초기화한다
     CreateDeviceAndSwapChain(hWindow);
     CreateFrameBuffer();
+    CreateGBuffer();
     CreateRasterizerState();
     CreateBlendState();
     CreateConstantBuffer();
-	CreateDepthStencilState();
-	CreateSamplerState();
-    UResourceManager::GetInstance().Initialize(Device,DeviceContext);
+    CreateDepthStencilState();
+    CreateSamplerState();
+    UResourceManager::GetInstance().Initialize(Device, DeviceContext);
 
     // Initialize Direct2D overlay after device/swapchain ready
     UStatsOverlayD2D::Get().Initialize(Device, DeviceContext, SwapChain);
@@ -135,6 +136,7 @@ void D3D11RHI::Release()
 
     // RTV/DSV/FrameBuffer
     ReleaseFrameBuffer();
+    ReleaseGBuffer();
 
     // Device + SwapChain
     ReleaseDeviceAndSwapChain();
@@ -244,7 +246,7 @@ void D3D11RHI::CreateSamplerState()
     SampleDesc.MinLOD = 0;
     SampleDesc.MaxLOD = D3D11_FLOAT32_MAX;
 
-	HRESULT HR = Device->CreateSamplerState(&SampleDesc, &DefaultSamplerState);
+    HRESULT HR = Device->CreateSamplerState(&SampleDesc, &DefaultSamplerState);
 }
 
 HRESULT D3D11RHI::CreateIndexBuffer(ID3D11Device* device, const FMeshData* meshData, ID3D11Buffer** outBuffer)
@@ -294,7 +296,7 @@ void D3D11RHI::UpdateViewProjectionBuffers(const FMatrix& ViewMatrix, const FMat
     static FMatrix LastViewMatrix;
     static FMatrix LastProjMatrix;
     static bool bFirstTime = true;
-    
+
     // 뷰/프로젝션이 변경되었을 때만 업데이트
     if (bFirstTime || ViewMatrix != LastViewMatrix || ProjMatrix != LastProjMatrix)
     {
@@ -307,7 +309,7 @@ void D3D11RHI::UpdateViewProjectionBuffers(const FMatrix& ViewMatrix, const FMat
 
         DeviceContext->Unmap(ViewProjCB, 0);
         DeviceContext->VSSetConstantBuffers(1, 1, &ViewProjCB); // b1 슬롯
-        
+
         LastViewMatrix = ViewMatrix;
         LastProjMatrix = ProjMatrix;
         bFirstTime = false;
@@ -340,7 +342,7 @@ void D3D11RHI::UpdateBillboardConstantBuffers(const FVector& pos, const FMatrix&
     dataPtr->Proj = ProjMatrix;
 
     // TODO 09/27 11:44 (Dongmin) - 문제 생기면 InverseAffine()으로 수정
-	// 현재 빌보드 안보이게 해둬서 테스트 못함
+    // 현재 빌보드 안보이게 해둬서 테스트 못함
     dataPtr->InverseViewMat = ViewMatrix.InverseAffineFast();
     //dataPtr->cameraRight = CameraRight;
     //dataPtr->cameraUp = CameraUp;
@@ -627,7 +629,7 @@ void D3D11RHI::UpdateUVScrollConstantBuffers(const FVector2D& Speed, float TimeS
 {
     if (!UVScrollCB) return;
 
-    struct { float x; float y; float t; float pad; } data { Speed.X, Speed.Y, TimeSec, 0.0f };
+    struct { float x; float y; float t; float pad; } data{ Speed.X, Speed.Y, TimeSec, 0.0f };
 
     D3D11_MAPPED_SUBRESOURCE mapped;
     if (SUCCEEDED(DeviceContext->Map(UVScrollCB, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped)))
@@ -645,7 +647,7 @@ void D3D11RHI::ReleaseSamplerState()
     {
         DefaultSamplerState->Release();
         DefaultSamplerState = nullptr;
-	}
+    }
 }
 
 void D3D11RHI::ReleaseBlendState()
@@ -805,6 +807,10 @@ void D3D11RHI::OnResize(UINT NewWidth, UINT NewHeight)
     // 새 프레임버퍼/RTV/DSV 생성
     CreateFrameBuffer();
 
+    // G-Buffer도 리사이즈
+    ReleaseGBuffer();
+    CreateGBuffer();
+
     // 뷰포트 갱신
     ViewportInfo.TopLeftX = 0.0f;
     ViewportInfo.TopLeftY = 0.0f;
@@ -925,11 +931,166 @@ void D3D11RHI::ResizeSwapChain(UINT width, UINT height)
     // 다시 RTV/DSV 만들기
     CreateBackBufferAndDepthStencil(width, height);
 
+    // G-Buffer도 리사이즈
+    ReleaseGBuffer();
+    CreateGBuffer();
+
     // 뷰포트도 갱신
     setviewort(width, height);
 }
 
 void D3D11RHI::PSSetDefaultSampler(UINT StartSlot)
 {
-	DeviceContext->PSSetSamplers(StartSlot, 1, &DefaultSamplerState);
+    DeviceContext->PSSetSamplers(StartSlot, 1, &DefaultSamplerState);
+}
+
+// ──────────────────────────────────────────────────────
+// G-Buffer Implementation
+// ──────────────────────────────────────────────────────
+void D3D11RHI::CreateGBuffer()
+{
+    UINT width = GetViewportWidth();
+    UINT height = GetViewportHeight();
+
+    if (width == 0 || height == 0) {
+        UE_LOG("Invalid viewport size for G-Buffer creation\n");
+        return;
+    }
+
+    // 1) G-Buffer Albedo Texture (RGBA8)
+    D3D11_TEXTURE2D_DESC albedoDesc = {};
+    albedoDesc.Width = width;
+    albedoDesc.Height = height;
+    albedoDesc.MipLevels = 1;
+    albedoDesc.ArraySize = 1;
+    albedoDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    albedoDesc.SampleDesc.Count = 1;
+    albedoDesc.SampleDesc.Quality = 0;
+    albedoDesc.Usage = D3D11_USAGE_DEFAULT;
+    albedoDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+
+    HRESULT hr = Device->CreateTexture2D(&albedoDesc, nullptr, &GBufferAlbedoTexture);
+    if (FAILED(hr)) {
+        UE_LOG("Failed to create G-Buffer Albedo texture\n");
+        return;
+    }
+
+    // Create RTV
+    D3D11_RENDER_TARGET_VIEW_DESC albedoRTVDesc = {};
+    albedoRTVDesc.Format = albedoDesc.Format;
+    albedoRTVDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+    Device->CreateRenderTargetView(GBufferAlbedoTexture, &albedoRTVDesc, &GBufferAlbedoRTV);
+
+    // Create SRV
+    D3D11_SHADER_RESOURCE_VIEW_DESC albedoSRVDesc = {};
+    albedoSRVDesc.Format = albedoDesc.Format;
+    albedoSRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+    albedoSRVDesc.Texture2D.MostDetailedMip = 0;
+    albedoSRVDesc.Texture2D.MipLevels = 1;
+    Device->CreateShaderResourceView(GBufferAlbedoTexture, &albedoSRVDesc, &GBufferAlbedoSRV);
+
+    // 2) G-Buffer Normal Texture (RGBA8)
+    D3D11_TEXTURE2D_DESC normalDesc = albedoDesc; // Copy base desc
+    normalDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+
+    hr = Device->CreateTexture2D(&normalDesc, nullptr, &GBufferNormalTexture);
+    if (FAILED(hr)) {
+        UE_LOG("Failed to create G-Buffer Normal texture\n");
+        return;
+    }
+
+    D3D11_RENDER_TARGET_VIEW_DESC normalRTVDesc = {};
+    normalRTVDesc.Format = normalDesc.Format;
+    normalRTVDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+    Device->CreateRenderTargetView(GBufferNormalTexture, &normalRTVDesc, &GBufferNormalRTV);
+
+    D3D11_SHADER_RESOURCE_VIEW_DESC normalSRVDesc = {};
+    normalSRVDesc.Format = normalDesc.Format;
+    normalSRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+    normalSRVDesc.Texture2D.MostDetailedMip = 0;
+    normalSRVDesc.Texture2D.MipLevels = 1;
+    Device->CreateShaderResourceView(GBufferNormalTexture, &normalSRVDesc, &GBufferNormalSRV);
+
+    // 3) G-Buffer Depth Texture (R32F)
+    D3D11_TEXTURE2D_DESC depthDesc = albedoDesc; // Copy base desc
+    depthDesc.Format = DXGI_FORMAT_R32_FLOAT;
+
+    hr = Device->CreateTexture2D(&depthDesc, nullptr, &GBufferDepthTexture);
+    if (FAILED(hr)) {
+        UE_LOG("Failed to create G-Buffer Depth texture\n");
+        return;
+    }
+
+    D3D11_RENDER_TARGET_VIEW_DESC depthRTVDesc = {};
+    depthRTVDesc.Format = depthDesc.Format;
+    depthRTVDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+    Device->CreateRenderTargetView(GBufferDepthTexture, &depthRTVDesc, &GBufferDepthRTV);
+
+    D3D11_SHADER_RESOURCE_VIEW_DESC depthSRVDesc = {};
+    depthSRVDesc.Format = depthDesc.Format;
+    depthSRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+    depthSRVDesc.Texture2D.MostDetailedMip = 0;
+    depthSRVDesc.Texture2D.MipLevels = 1;
+    Device->CreateShaderResourceView(GBufferDepthTexture, &depthSRVDesc, &GBufferDepthSRV);
+
+    UE_LOG("G-Buffer created successfully (%dx%d)\n", width, height);
+}
+
+void D3D11RHI::ReleaseGBuffer()
+{
+    // Release SRVs
+    if (GBufferAlbedoSRV) { GBufferAlbedoSRV->Release(); GBufferAlbedoSRV = nullptr; }
+    if (GBufferNormalSRV) { GBufferNormalSRV->Release(); GBufferNormalSRV = nullptr; }
+    if (GBufferDepthSRV) { GBufferDepthSRV->Release(); GBufferDepthSRV = nullptr; }
+
+    // Release RTVs
+    if (GBufferAlbedoRTV) { GBufferAlbedoRTV->Release(); GBufferAlbedoRTV = nullptr; }
+    if (GBufferNormalRTV) { GBufferNormalRTV->Release(); GBufferNormalRTV = nullptr; }
+    if (GBufferDepthRTV) { GBufferDepthRTV->Release(); GBufferDepthRTV = nullptr; }
+
+    // Release Textures
+    if (GBufferAlbedoTexture) { GBufferAlbedoTexture->Release(); GBufferAlbedoTexture = nullptr; }
+    if (GBufferNormalTexture) { GBufferNormalTexture->Release(); GBufferNormalTexture = nullptr; }
+    if (GBufferDepthTexture) { GBufferDepthTexture->Release(); GBufferDepthTexture = nullptr; }
+}
+
+void D3D11RHI::OMSetGBufferRenderTargets()
+{
+    ID3D11RenderTargetView* RTVs[3] = {
+        GBufferAlbedoRTV,
+        GBufferNormalRTV,
+        GBufferDepthRTV
+    };
+
+    DeviceContext->OMSetRenderTargets(3, RTVs, DepthStencilView);
+}
+
+void D3D11RHI::OMSetBackBufferRenderTarget()
+{
+    // G-Buffer에서 3개 RTV가 바인딩되어 있었으므로 모든 슬롯을 명시적으로 설정
+    ID3D11RenderTargetView* RTVs[3] = {
+        RenderTargetView,  // 슬롯 0: 백버퍼
+        nullptr,           // 슬롯 1: null로 언바인드
+        nullptr            // 슬롯 2: null로 언바인드
+    };
+
+    DeviceContext->OMSetRenderTargets(3, RTVs, DepthStencilView);
+}
+
+UINT D3D11RHI::GetBackBufferWidth() const
+{
+    if (!SwapChain) return 0;
+
+    DXGI_SWAP_CHAIN_DESC desc;
+    SwapChain->GetDesc(&desc);
+    return desc.BufferDesc.Width;
+}
+
+UINT D3D11RHI::GetBackBufferHeight() const
+{
+    if (!SwapChain) return 0;
+
+    DXGI_SWAP_CHAIN_DESC desc;
+    SwapChain->GetDesc(&desc);
+    return desc.BufferDesc.Height;
 }
