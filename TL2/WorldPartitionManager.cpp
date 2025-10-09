@@ -23,11 +23,11 @@ namespace
 UWorldPartitionManager::UWorldPartitionManager()
 {
 	//FBound WorldBounds(FVector(-50, -50, -50), FVector(50, 50, 50));
-	FBound WorldBounds(FVector(-50, -50, -50), FVector(50, 50, 50));
+	FAABB WorldBounds(FVector(-50, -50, -50), FVector(50, 50, 50));
 	SceneOctree = new FOctree(WorldBounds, 0, 8, 10);
 	// BVH도 동일 월드 바운드로 초기화 (더 깊고 작은 리프 설정)
 	//BVH = new FBVHierachy(FBound(), 0, 5, 1); 
-	BVH = new FBVHierachy(FBound(), 0, 8, 1); 
+	BVH = new FBVHierachy(FAABB(), 0, 8, 1); 
 	//BVH = new FBVHierachy(FBound(), 0, 10, 3);
 }
 
@@ -47,32 +47,17 @@ UWorldPartitionManager::~UWorldPartitionManager()
 
 void UWorldPartitionManager::Clear()
 {
-	//ClearSceneOctree();
 	ClearBVHierachy();
 
 	DirtyQueue.Empty();
 	DirtySet.Empty();
 }
 
-void UWorldPartitionManager::Register(AActor* Owner)
-{
-	if (!Owner) return;
-	if (!ShouldIndexActor(Owner)) return;
-	// 액터의 모든 PrimitiveComponent를 등록
-	for (USceneComponent* SC : Owner->GetSceneComponents())
-	{
-		if (UPrimitiveComponent* Prim = Cast<UPrimitiveComponent>(SC))
-		{
-			Register(Prim);
-		}
-	}
-}
-
 void UWorldPartitionManager::BulkRegister(const TArray<AActor*>& Actors)
 {
 	if (Actors.empty()) return;
 
-	TArray<std::pair<UPrimitiveComponent*, FBound>> PrimsAndBounds;
+	TArray<std::pair<UPrimitiveComponent*, FAABB>> PrimsAndBounds;
 	
 	for (AActor* Actor : Actors)
 	{
@@ -90,33 +75,6 @@ void UWorldPartitionManager::BulkRegister(const TArray<AActor*>& Actors)
 	}
 
 	if (BVH) BVH->BulkInsert(PrimsAndBounds);
-}
-
-void UWorldPartitionManager::Unregister(AActor* Owner)
-{
-	if (!Owner) return;
-	if (!ShouldIndexActor(Owner)) return;
-	
-	// BVH에서 해당 액터 소유 모든 프리미티브 제거
-	if (BVH) 
-	{
-		BVH->Remove(Owner);
-		BVH->FlushRebuild(); // Immediately apply removal
-	}
-
-	// DirtySet에서 이 액터 소유 프리미티브 제거
-	TArray<UPrimitiveComponent*> ToErase;
-	for (USceneComponent* SC : Owner->GetSceneComponents())
-	{
-		if (UPrimitiveComponent* Prim = Cast<UPrimitiveComponent>(SC))
-		{
-			ToErase.Add(Prim);
-		}
-	}
-	for (UPrimitiveComponent* Prim : ToErase)
-	{
-		DirtySet.erase(Prim);
-	}
 }
 
 void UWorldPartitionManager::Register(UPrimitiveComponent* Prim)

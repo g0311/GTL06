@@ -11,19 +11,19 @@ class FBVHierachy
 {
 public:
     // 생성자/소멸자
-    FBVHierachy(const FBound& InBounds, int InDepth = 0, int InMaxDepth = 12, int InMaxObjects = 8);
+    FBVHierachy(const FAABB& InBounds, int InDepth = 0, int InMaxDepth = 12, int InMaxObjects = 8);
     ~FBVHierachy();
 
     // 초기화
     void Clear();
 
     // 삽입 / 제거 / 갱신 (컴포넌트 단위)
-    void Insert(UPrimitiveComponent* InPrimitive, const FBound& PrimBounds);
-    void BulkInsert(const TArray<std::pair<UPrimitiveComponent*, FBound>>& PrimsAndBounds);
-    bool Remove(UPrimitiveComponent* InPrimitive, const FBound& PrimBounds);
-    void Update(UPrimitiveComponent* InPrimitive, const FBound& OldBounds, const FBound& NewBounds);
+    void Insert(UPrimitiveComponent* InPrimitive, const FAABB& PrimBounds);
+    void BulkInsert(const TArray<std::pair<UPrimitiveComponent*, FAABB>>& PrimsAndBounds);
+    bool Remove(UPrimitiveComponent* InPrimitive, const FAABB& PrimBounds);
+    void Update(UPrimitiveComponent* InPrimitive, const FAABB& OldBounds, const FAABB& NewBounds);
 
-    bool Contains(const FBound& Box) const;
+    bool Contains(const FAABB& Box) const;
 
     // Partition Manager Interface (액터 단위 래퍼)
     void Remove(AActor* InActor);
@@ -41,15 +41,15 @@ public:
     int TotalActorCount() const;
     int MaxOccupiedDepth() const;
     void DebugDump() const;
-    const FBound& GetBounds() const { return Bounds; }
+    const FAABB& GetBounds() const { return Bounds; }
 
 private:
-    static FBound UnionBounds(const FBound& A, const FBound& B);
+    static FAABB UnionBounds(const FAABB& A, const FAABB& B);
 
     // === LBVH data ===
     struct FLBVHNode
     {
-        FBound Bounds;
+        FAABB Bounds;
         int32 Left = -1;
         int32 Right = -1;
         int32 First = -1;
@@ -64,13 +64,13 @@ private:
     int Depth;
     int MaxDepth;
     int MaxObjects;
-    FBound Bounds;
+    FAABB Bounds;
 
     // 리프 페이로드(컴포넌트)
     TArray<UPrimitiveComponent*> Primitives;
 
     // 컴포넌트의 마지막 바운드 캐시
-    TMap<UPrimitiveComponent*, FBound> PrimLastBounds;
+    TMap<UPrimitiveComponent*, FAABB> PrimLastBounds;
     TArray<UPrimitiveComponent*> PrimArray;
 
     // LBVH nodes

@@ -421,6 +421,9 @@
     <ClCompile Include="DecalComponent.cpp">
       <Filter>1. Core\Object System\Components</Filter>
     </ClCompile>
+    <ClCompile Include="BoundingBox.cpp">
+      <Filter>5. Tools &amp; Utilities\Spatial</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Primitive.hlsl">
@@ -801,6 +804,9 @@
     </ClInclude>
     <ClInclude Include="DecalComponent.h">
       <Filter>1. Core\Object System\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="BoundingBox.h">
+      <Filter>5. Tools &amp; Utilities\Spatial</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

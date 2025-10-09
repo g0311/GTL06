@@ -37,6 +37,7 @@
 #include "GizmoArrowComponent.h"
 #include "GizmoRotateComponent.h"
 #include "GizmoScaleComponent.h"
+#include "DecalComponent.h"
 
 URenderManager::URenderManager()
 	: OcclusionCPU(new FOcclusionCullingManagerCPU())
@@ -157,6 +158,8 @@ void URenderManager::RenderViewports(ACameraActor* Camera, FViewport* Viewport)
 	// === 5. 액터 렌더링 ===
     RenderGameActors(ViewMatrix, ProjectionMatrix, EffectiveViewMode, visibleCount);
     //RenderWithMaterialSorting(ViewMatrix, ProjectionMatrix, EffectiveViewMode, visibleCount);
+
+    RenderDecals(ViewMatrix, ProjectionMatrix, EffectiveViewMode);
 
 	// === 6. 에디터 전용 액터 렌더링 ===
 	RenderEditorActors(ViewMatrix, ProjectionMatrix, EffectiveViewMode);
@@ -471,6 +474,7 @@ void URenderManager::RenderGameActors(const FMatrix& ViewMatrix, const FMatrix& 
     if (!World->GetRenderSettings().IsShowFlagEnabled(EEngineShowFlags::SF_Primitives))
         return;
         
+    RenderedComponentCache.clear();
     for (AActor* Actor : World->GetActors())
     {
         if (!Actor) continue;
@@ -491,15 +495,56 @@ void URenderManager::RenderGameActors(const FMatrix& ViewMatrix, const FMatrix& 
         {
             if (UPrimitiveComponent* Primitive = Cast<UPrimitiveComponent>(Component))
             {
+                if (UDecalComponent* Decal = Cast<UDecalComponent>(Component))
+                    continue;
+
                 if (ShouldRenderComponent(Primitive))
                 {
                     Renderer->SetViewModeType(EffectiveViewMode);
                     Primitive->Render(Renderer, ViewMatrix, ProjectionMatrix);
                     Renderer->OMSetDepthStencilState(EComparisonFunc::LessEqual);
+                    RenderedComponentCache.Add(Primitive);
                 }
                 
                 if (!Primitive->GetCulled())
                     visibleCount++;
+            }
+        }
+    }
+}
+
+void URenderManager::RenderDecals(const FMatrix& ViewMatrix, const FMatrix& ProjectionMatrix, EViewModeIndex EffectiveViewMode)
+{
+    if (!World->GetRenderSettings().IsShowFlagEnabled(EEngineShowFlags::SF_Primitives))
+        return;
+
+    for (AActor* Actor : World->GetActors())
+    {
+        if (!Actor) continue;
+        if (Actor->GetActorHiddenInGame()) continue;
+
+        // CPU 오클루전 컴링: UUID로 보임 여부 확인
+        if (bUseCPUOcclusion)
+        {
+            uint32_t id = Actor->UUID;
+            if (id < VisibleFlags.size() && VisibleFlags[id] == 0)
+            {
+                continue; // 가려짐 → 스킵
+            }
+        }
+
+        // 액터의 모든 컴포넌트 렌더링
+        for (USceneComponent* Component : Actor->GetSceneComponents())
+        {
+            if (UDecalComponent* Decal = Cast<UDecalComponent>(Component))
+            {
+                if (ShouldRenderComponent(Decal))
+                {
+                    Decal->GenerateDecalMesh(RenderedComponentCache);
+                    Renderer->SetViewModeType(EffectiveViewMode);
+                    Decal->Render(Renderer, ViewMatrix, ProjectionMatrix);
+                    Renderer->OMSetDepthStencilState(EComparisonFunc::LessEqual);
+                }
             }
         }
     }
@@ -574,7 +619,7 @@ void URenderManager::RenderBoundingBoxes()
             if (UPrimitiveComponent* Primitive = Cast<UPrimitiveComponent>(Component))
             {
                 // AABB (노란색 라인)
-                Primitive->AddBoundingBoxLines(Renderer, AABBColor);
+                Primitive->AddAABBLines(Renderer, AABBColor);
                 
                 // OBB (파란색 라인)
                 Primitive->AddOrientedBoundingBoxLines(Renderer, OBBColor);
@@ -629,7 +674,7 @@ void URenderManager::BuildCpuOcclusionSets(
 
         UStaticMeshComponent* SMC = SMA->GetStaticMeshComponent();
         if (!SMC || SMC->GetCulled()) continue;
-        FBound Bound = SMC->GetWorldAABB();
+        FAABB Bound = SMC->GetWorldAABB();
 
         OutOccluders.emplace_back();
         FCandidateDrawable& occluder = OutOccluders.back();

@@ -3,7 +3,6 @@
 #include "SceneLoader.h"
 #include "SceneComponent.h"
 #include "SceneRotationUtils.h"
-#include "AABoundingBoxComponent.h"
 #include "World.h"
 #include "WorldPartitionManager.h"
 #include "Renderer.h"
@@ -49,7 +48,7 @@ FVector UPrimitiveComponent::ComputeWorldExtentsArvo(const FVector& E, const FMa
     return FVector(Wx, Wy, Wz);
 }
 
-FBound UPrimitiveComponent::GetWorldAABB() const
+FAABB UPrimitiveComponent::GetWorldAABB() const
 {
     // 로컬 중심/익스텐트 계산 후 월드로 변환 (행벡터 규약)
     const FVector LocalCenter = (LocalAABB.Min + LocalAABB.Max) * 0.5f;
@@ -65,7 +64,7 @@ FBound UPrimitiveComponent::GetWorldAABB() const
     );
 
     const FVector WorldExtents = ComputeWorldExtentsArvo(LocalExtents, WorldMat);
-    return FBound(WorldCenter - WorldExtents, WorldCenter + WorldExtents);
+    return FAABB(WorldCenter - WorldExtents, WorldCenter + WorldExtents);
 }
 
 void UPrimitiveComponent::MarkDirtyInBVH()
@@ -99,25 +98,38 @@ void UPrimitiveComponent::OnRegister()
 
 void UPrimitiveComponent::OnUnregister()
 {
-    // Automatically unregister from BVH when component is unregistered
-    UWorld* World = GetWorld();
-    if (World)
-    {
-        UWorldPartitionManager* PartitionMgr = World->GetPartitionManager();
-        if (PartitionMgr)
-        {
-            PartitionMgr->Unregister(this);
-        }
-    }
-    
     Super::OnUnregister();
+    MarkDirtyInBVH();
 }
 
-void UPrimitiveComponent::AddBoundingBoxLines(URenderer* Renderer, const FVector4& Color)
+FOBB UPrimitiveComponent::GetWorldOBB() const
+{
+    FOBB obb;
+    const FTransform& WorldTransform = GetWorldTransform();
+    const FAABB& LocalAABB = GetLocalAABB();
+
+    // OBB의 중심점은 LocalAABB의 중심점을 월드 변환한 것
+    obb.Center = WorldTransform.TransformPosition(LocalAABB.GetCenter());
+
+    // OBB의 축은 월드 변환 행렬의 각 축
+    const FMatrix& WorldMatrix = GetWorldMatrix();
+    obb.Axis[0] = FVector(WorldMatrix.M[0][0], WorldMatrix.M[0][1], WorldMatrix.M[0][2]).GetNormalized();
+    obb.Axis[1] = FVector(WorldMatrix.M[1][0], WorldMatrix.M[1][1], WorldMatrix.M[1][2]).GetNormalized();
+    obb.Axis[2] = FVector(WorldMatrix.M[2][0], WorldMatrix.M[2][1], WorldMatrix.M[2][2]).GetNormalized();
+
+    // Extent를 직접 성분별로 곱합니다.
+    FVector LocalExtent = LocalAABB.GetExtent();
+    FVector WorldScale = WorldTransform.Scale3D;
+    obb.Extent = FVector(LocalExtent.X * WorldScale.X, LocalExtent.Y * WorldScale.Y, LocalExtent.Z * WorldScale.Z);
+
+    return obb;
+}
+
+void UPrimitiveComponent::AddAABBLines(URenderer* Renderer, const FVector4& Color)
 {
     if (!Renderer) return;
     
-    FBound WorldBounds = GetWorldAABB();
+    FAABB WorldBounds = GetWorldAABB();
     FVector Min = WorldBounds.Min;
     FVector Max = WorldBounds.Max;
     
@@ -161,7 +173,7 @@ void UPrimitiveComponent::AddOrientedBoundingBoxLines(URenderer* Renderer, const
     if (!Renderer) return;
     
     // 로컬 AABB 가져오기
-    FBound LocalBounds = GetLocalAABB();
+    FAABB LocalBounds = GetLocalAABB();
     FVector LocalMin = LocalBounds.Min;
     FVector LocalMax = LocalBounds.Max;
     

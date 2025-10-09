@@ -9,7 +9,7 @@ class FOctree;
 class FBVHierachy;
 
 struct FRay;
-struct FBound;
+struct FAABB;
 struct Frustum;
 
 class UWorldPartitionManager : public UObject
@@ -21,9 +21,6 @@ public:
 	~UWorldPartitionManager();
 
 	void Clear();
-	// Actor-based API (compatibility): 내부에서 컴포넌트 단위로 위임
-	void Register(AActor* Actor);
-	void Unregister(AActor* Actor);
 	void MarkDirty(AActor* Actor);
 	// Primitive-based API (권장)
 	void Register(UPrimitiveComponent* Prim);

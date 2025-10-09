@@ -161,6 +161,7 @@
   <ItemGroup>
     <ClCompile Include="ActorComponent.cpp" />
     <ClCompile Include="BillboardComponent.cpp" />
+    <ClCompile Include="BoundingBox.cpp" />
     <ClCompile Include="BVHierachy.cpp" />
     <ClCompile Include="DecalComponent.cpp" />
     <ClCompile Include="Level.cpp" />
@@ -344,6 +345,7 @@
   <ItemGroup>
     <ClInclude Include="ActorComponent.h" />
     <ClInclude Include="BillboardComponent.h" />
+    <ClInclude Include="BoundingBox.h" />
     <ClInclude Include="BVHierachy.h" />
     <ClInclude Include="DecalComponent.h" />
     <ClInclude Include="Level.h" />

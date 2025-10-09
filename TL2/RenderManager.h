@@ -63,6 +63,10 @@ private:
     void RenderGameActors(const FMatrix& ViewMatrix, const FMatrix& ProjectionMatrix,
         EViewModeIndex EffectiveViewMode, int& visibleCount);
 
+    void RenderDecals(const FMatrix& ViewMatrix, const FMatrix& ProjectionMatrix,
+        EViewModeIndex EffectiveViewMode);
+
+
     void RenderEditorActors(const FMatrix& ViewMatrix, const FMatrix& ProjectionMatrix,
         EViewModeIndex EffectiveViewMode);
 
@@ -107,5 +111,5 @@ private:
     bool                        bUseCPUOcclusion = false; // False 하면 오클루전 컬링 안씁니다.
     int                         OcclGridDiv = 2; // 화면 크기/이 값 = 오클루전 그리드 해상도(1/6 권장)
 
-
+    TArray<UPrimitiveComponent*> RenderedComponentCache;
 };

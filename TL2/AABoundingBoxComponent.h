@@ -23,10 +23,10 @@ public:
 
 	// Arvo 기반 월드 AABB
 	// 코너 8개 변환 방식에 비해 8배 이상 빠릅니다.
-	FBound GetWorldBound() const;
+	FAABB GetWorldBound() const;
 
 	// 월드 좌표계에서의 AABB 반환
-	FBound GetWorldBoundFromCube();
+	FAABB GetWorldBoundFromCube();
 	//FBound GetWorldBoundFromSphere() const;
 
 	TArray<FVector4> GetLocalCorners() const;
@@ -52,7 +52,7 @@ private:
 
 	FVector LocalMin;
 	FVector LocalMax;
-	FBound Bound;
+	FAABB Bound;
 	EPrimitiveType PrimitiveType = EPrimitiveType::Default;
 };
 

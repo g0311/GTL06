@@ -40,14 +40,14 @@ AStaticMeshActor::~AStaticMeshActor()
     StaticMeshComponent = nullptr;
 }
 
-FBound AStaticMeshActor::GetBounds() const
+FAABB AStaticMeshActor::GetBounds() const
 {
     // 컴포넌트 내장 바운즈만 사용
     if (StaticMeshComponent)
     {
         return StaticMeshComponent->GetWorldAABB();
     }
-    return FBound();
+    return FAABB();
 }
 
 void AStaticMeshActor::SetStaticMeshComponent(UStaticMeshComponent* InStaticMeshComponent)

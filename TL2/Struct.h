@@ -4,8 +4,6 @@
 #include <string>
 #include <limits>
 
-#include "UEContainer.h"
-
 
 
 // 혹시 다른 헤더에서 새어 들어온 매크로 방지
@@ -177,7 +175,7 @@ struct FVector
             std::fabs(Z - V.Z) < KINDA_SMALL_NUMBER;
     }
     bool operator!=(const FVector& V) const { return !(*this == V); }
-    
+
     FVector ComponentMin(const FVector& B)
     {
         return FVector(
@@ -259,13 +257,13 @@ struct FVector
     {
         return FVector(1.f, 1.f, 1.f);
     }
-    
+
     // 영 벡터 체크
     bool IsZero() const
     {
-        return std::fabs(X) < KINDA_SMALL_NUMBER && 
-               std::fabs(Y) < KINDA_SMALL_NUMBER && 
-               std::fabs(Z) < KINDA_SMALL_NUMBER;
+        return std::fabs(X) < KINDA_SMALL_NUMBER &&
+            std::fabs(Y) < KINDA_SMALL_NUMBER &&
+            std::fabs(Z) < KINDA_SMALL_NUMBER;
     }
 };
 
@@ -428,20 +426,20 @@ struct FQuat
         return FVector(RadianToDegree(Pitch), RadianToDegree(Yaw), RadianToDegree(Roll));
     }
     FVector GetForwardVector() const
-{
-    // 보통 게임엔진(Z-Up, Forward = +X) 기준
-    return RotateVector(FVector(1, 0, 0));
-}
+    {
+        // 보통 게임엔진(Z-Up, Forward = +X) 기준
+        return RotateVector(FVector(1, 0, 0));
+    }
 
-FVector GetRightVector() const
-{
-    return RotateVector(FVector(0, 1, 0));
-}
+    FVector GetRightVector() const
+    {
+        return RotateVector(FVector(0, 1, 0));
+    }
 
-FVector GetUpVector() const
-{
-    return RotateVector(FVector(0, 0, 1));
-}
+    FVector GetUpVector() const
+    {
+        return RotateVector(FVector(0, 0, 1));
+    }
 
     // Slerp
     static FQuat Slerp(const FQuat& A, const FQuat& B, float T)
@@ -481,9 +479,9 @@ FVector GetUpVector() const
     {
         FQuat End = (Dot(A, B) < 0.0f) ? FQuat(-B.X, -B.Y, -B.Z, -B.W) : B;
         FQuat Quat(A.X + (End.X - A.X) * T,
-                A.Y + (End.Y - A.Y) * T,
-                A.Z + (End.Z - A.Z) * T,
-                A.W + (End.W - A.W) * T);
+            A.Y + (End.Y - A.Y) * T,
+            A.Z + (End.Z - A.Z) * T,
+            A.W + (End.W - A.W) * T);
         Quat.Normalize();
         return Quat;
     }
@@ -492,19 +490,19 @@ FVector GetUpVector() const
     bool operator==(const FQuat& Q) const
     {
         return std::fabs(X - Q.X) < KINDA_SMALL_NUMBER &&
-               std::fabs(Y - Q.Y) < KINDA_SMALL_NUMBER &&
-               std::fabs(Z - Q.Z) < KINDA_SMALL_NUMBER &&
-               std::fabs(W - Q.W) < KINDA_SMALL_NUMBER;
+            std::fabs(Y - Q.Y) < KINDA_SMALL_NUMBER &&
+            std::fabs(Z - Q.Z) < KINDA_SMALL_NUMBER &&
+            std::fabs(W - Q.W) < KINDA_SMALL_NUMBER;
     }
     bool operator!=(const FQuat& Q) const { return !(*this == Q); }
-    
+
     // 단위 쿼터니온 체크
     bool IsIdentity() const
     {
         return std::fabs(X) < KINDA_SMALL_NUMBER &&
-               std::fabs(Y) < KINDA_SMALL_NUMBER &&
-               std::fabs(Z) < KINDA_SMALL_NUMBER &&
-               std::fabs(W - 1.0f) < KINDA_SMALL_NUMBER;
+            std::fabs(Y) < KINDA_SMALL_NUMBER &&
+            std::fabs(Z) < KINDA_SMALL_NUMBER &&
+            std::fabs(W - 1.0f) < KINDA_SMALL_NUMBER;
     }
 
     // 선언: 행렬 변환
@@ -548,9 +546,9 @@ struct alignas(16) FMatrix
     }
 
     FMatrix(float M00, float M01, float M02, float M03,
-              float M10, float M11, float M12, float M13,
-              float M20, float M21, float M22, float M23,
-              float M30, float M31, float M32, float M33)
+        float M10, float M11, float M12, float M13,
+        float M20, float M21, float M22, float M23,
+        float M30, float M31, float M32, float M33)
     {
         Rows[0] = _mm_set_ps(M03, M02, M01, M00);
         Rows[1] = _mm_set_ps(M13, M12, M11, M10);
@@ -726,7 +724,7 @@ struct alignas(16) FMatrix
         }
         return true;
     }
-    
+
     bool operator!=(const FMatrix& Other) const
     {
         return !(*this == Other);
@@ -843,13 +841,13 @@ struct FTransform
         FQuat    TRotation = FQuat::Slerp(A.Rotation, B.Rotation, T);
         return FTransform(TPosition, TRotation, TScale);
     }
-    
+
     // 비교 연산자
     bool operator==(const FTransform& Other) const
     {
         return Translation == Other.Translation &&
-               Rotation == Other.Rotation &&
-               Scale3D == Other.Scale3D;
+            Rotation == Other.Rotation &&
+            Scale3D == Other.Scale3D;
     }
     bool operator!=(const FTransform& Other) const { return !(*this == Other); }
 };
@@ -1015,7 +1013,7 @@ inline FMatrix MakeRotationRowMajorFromQuat(const FQuat& Q)
     M.Rows[1] = _mm_set_ps(0.0f, YZ + WX, 1.0f - (XX + ZZ), XY - WZ);
     M.Rows[2] = _mm_set_ps(0.0f, 1.0f - (XX + YY), YZ - WX, XZ + WY);
     M.Rows[3] = _mm_set_ps(1.0f, 0.0f, 0.0f, 0.0f);
-    
+
     return M;
 }
 
@@ -1035,10 +1033,10 @@ inline FMatrix FTransform::ToMatrixWithScaleLocalXYZ() const
 
     // The YUpToZUp matrix for coordinate system conversion
     FMatrix YUpToZUp(
-         0,  1,  0, 0,
-         0,  0,  1, 0,
-         1,  0,  0, 0,
-         0,  0,  0, 1
+        0, 1, 0, 0,
+        0, 0, 1, 0,
+        1, 0, 0, 0,
+        0, 0, 0, 1
     );
 
     // The multiplication will use the SIMD-optimized operator*
@@ -1052,7 +1050,7 @@ inline FTransform FTransform::operator*(const FTransform& Other) const
     FTransform Result;
 
     // 회전 결합
-    Result.Rotation =  Other.Rotation*Rotation;
+    Result.Rotation = Other.Rotation * Rotation;
     Result.Rotation.Normalize();
 
     // 스케일 결합 (component-wise)
@@ -1064,8 +1062,8 @@ inline FTransform FTransform::operator*(const FTransform& Other) const
 
     // 위치 결합: R*(S*Other.T) + T
     FVector Scaled(Other.Translation.X * Scale3D.X,
-                   Other.Translation.Y * Scale3D.Y,
-                   Other.Translation.Z * Scale3D.Z);
+        Other.Translation.Y * Scale3D.Y,
+        Other.Translation.Z * Scale3D.Z);
     FVector Rotated = Rotation.RotateVector(Scaled);
     Result.Translation = Translation + Rotated;
 
@@ -1089,8 +1087,8 @@ inline FTransform FTransform::Inverse() const
 
     // InvTrans = -(InvRot * (InvScale * T))
     FVector Scaled(Translation.X * InvScale.X,
-                   Translation.Y * InvScale.Y,
-                   Translation.Z * InvScale.Z);
+        Translation.Y * InvScale.Y,
+        Translation.Z * InvScale.Z);
     FVector Rotated = InvRot.RotateVector(Scaled);
     FVector InvTrans(-Rotated.X, -Rotated.Y, -Rotated.Z);
 
@@ -1109,185 +1107,4 @@ struct alignas(16) FRay
 {
     FVector Origin;
     FVector Direction; // Normalized
-};
-
-struct FBound
-{
-
-    FVector Min;
-    FVector Max;
-
-    FBound() : Min(FVector()), Max(FVector()) {}
-    FBound(const FVector& InMin, const FVector& InMax) : Min(InMin), Max(InMax) {}
-
-    // 중심점
-    FVector GetCenter() const
-    {
-        return (Min + Max) * 0.5f;
-    }
-
-    // 반쪽 크기 (Extent)
-    FVector GetExtent() const
-    {
-        return (Max - Min) * 0.5f;
-    }
-
-    // 다른 박스를 완전히 포함하는지 확인
-    bool Contains(const FBound& Other) const
-    {
-        return (Min.X <= Other.Min.X && Max.X >= Other.Max.X) &&
-            (Min.Y <= Other.Min.Y && Max.Y >= Other.Max.Y) &&
-            (Min.Z <= Other.Min.Z && Max.Z >= Other.Max.Z);
-    }
-
-    // 교차 여부만 확인
-    bool Intersects(const FBound& Other) const
-    {
-        return (Min.X <= Other.Max.X && Max.X >= Other.Min.X) &&
-            (Min.Y <= Other.Max.Y && Max.Y >= Other.Min.Y) &&
-            (Min.Z <= Other.Max.Z && Max.Z >= Other.Min.Z);
-    }
-
-    // i번째 옥탄트 Bounds 반환
-    FBound CreateOctant(int i) const
-    {
-        FVector Center = GetCenter();
-        FVector Extent = GetExtent() * 0.5f;
-
-        FVector NewMin, NewMax;
-
-        // X축 (i의 1비트)
-        // 0 왼쪽 1 오른쪽 
-        if (i & 1)
-        {
-            NewMin.X = Center.X;
-            NewMax.X = Max.X;
-        }
-        else
-        {
-            NewMin.X = Min.X;
-            NewMax.X = Center.X;
-        }
-
-        // Y축 (i의 2비트)
-        // 0 앞 2 뒤 
-        if (i & 2)
-        {
-            NewMin.Y = Center.Y;
-            NewMax.Y = Max.Y;
-        }
-        else
-        {
-            NewMin.Y = Min.Y;
-            NewMax.Y = Center.Y;
-        }
-
-        // Z축 (i의 4비트)
-        // 0 아래 4 위 
-        if (i & 4)
-        {
-            NewMin.Z = Center.Z;
-            NewMax.Z = Max.Z;
-        }
-        else
-        {
-            NewMin.Z = Min.Z;
-            NewMax.Z = Center.Z;
-        }
-
-        return FBound(NewMin, NewMax);
-    }
-    // Slab Method
-    bool IntersectsRay(const FRay& InRay) const
-    {
-        float TMin = -FLT_MAX;
-        float TMax = FLT_MAX;
-        // X, Y, Z 각각 검사
-        for (int Axis = 0; Axis < 3; ++Axis)
-        {
-            float RayOrigin = InRay.Origin[Axis];
-            float RayDir = InRay.Direction[Axis];
-            float BoundMin = Min[Axis];
-            float BoundMax = Max[Axis];
-            if (fabs(RayDir) < 1e-6f)
-            {
-                // 평행한 경우 → 레이가 박스 영역을 벗어나 있으면 교차 X
-                if (RayOrigin < BoundMin || RayOrigin > BoundMax)
-                {
-                    return false;
-                }
-            }
-            else
-            {
-                float InvDir = 1.0f / RayDir;
-                float T1 = (BoundMin - RayOrigin) * InvDir;
-                float T2 = (BoundMax - RayOrigin) * InvDir;
-                if (T1 > T2)
-                {
-                    std::swap(T1, T2);
-                }
-                if (T1 > TMin) TMin = T1;
-                if (T2 < TMax) TMax = T2;
-                if (TMin > TMax)
-                {
-                    return false; // 레이가 박스에서 벗어남
-                }
-            }
-        }
-        return true;
-    }
-    bool RayAABB_IntersectT(const FRay& InRay, float& OutEnterDistance, float& OutExitDistance)
-    {
-        // 레이가 박스를 통과할 수 있는 [Enter, Exit] 구간
-        float ClosestEnter = -FLT_MAX;
-        float FarthestExit = FLT_MAX;
-
-        for (int32 AxisIndex = 0; AxisIndex < 3; ++AxisIndex)
-        {
-            const float RayOriginAxis = InRay.Origin[AxisIndex];
-            const float RayDirectionAxis = InRay.Direction[AxisIndex];
-            const float BoxMinAxis = Min[AxisIndex];
-            const float BoxMaxAxis = Max[AxisIndex];
-
-            // 레이가 축에 평행한데, 박스 범위를 벗어나면 교차 불가
-            if (std::abs(RayDirectionAxis) < 1e-6f)
-            {
-                if (RayOriginAxis < BoxMinAxis || RayOriginAxis > BoxMaxAxis)
-                {
-                    return false;
-                }
-            }
-            else
-            {
-                const float InvDirection = 1.0f / RayDirectionAxis;
-
-                // 평면과의 교차 거리 
-                // 레이가 AABB의 min 평면과 max 평면을 만나는 t 값 (거리)
-                float DistanceToMinPlane = (BoxMinAxis - RayOriginAxis) * InvDirection;
-                float DistanceToMaxPlane = (BoxMaxAxis - RayOriginAxis) * InvDirection;
-
-                if (DistanceToMinPlane > DistanceToMaxPlane)
-                {
-                    std::swap(DistanceToMinPlane, DistanceToMaxPlane);
-                }
-                // ClosestEnter : AABB 안에 들어가는 시점
-                // 더 늦게 들어오는 값으로 갱신
-                if (DistanceToMinPlane > ClosestEnter)  ClosestEnter = DistanceToMinPlane;
-
-                // FarthestExit : AABB에서 나가는 시점
-                // 더 빨리 나가는 값으로 갱신 
-                if (DistanceToMaxPlane < FarthestExit) FarthestExit = DistanceToMaxPlane;
-
-                // 가장 늦게 들어오는 시점이 빠르게 나가는 시점보다 늦다는 것은 교차하지 않음을 의미한다. 
-                if (ClosestEnter > FarthestExit)
-                {
-                    return false; // 레이가 박스를 관통하지 않음
-                }
-            }
-        }
-        // 레이가 박스와 실제로 만나는 구간이다 . 
-        OutEnterDistance = (ClosestEnter < 0.0f) ? 0.0f : ClosestEnter;
-        OutExitDistance = FarthestExit;
-        return true;
-    }
 };

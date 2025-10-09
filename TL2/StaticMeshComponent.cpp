@@ -70,11 +70,11 @@ void UStaticMeshComponent::SetStaticMesh(const FString& PathFileName)
                 Min = Min.ComponentMin(V.pos);
                 Max = Max.ComponentMax(V.pos);
             }
-            SetLocalAABB(FBound(Min, Max));
+            SetLocalAABB(FAABB(Min, Max));
         }
         else
         {
-            SetLocalAABB(FBound());
+            SetLocalAABB(FAABB());
         }
     }
     MarkAttachedPrimitivesAsDirty();

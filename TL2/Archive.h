@@ -1,6 +1,5 @@
 ﻿#pragma once
 #include "UEContainer.h"
-#include "Enums.h"
 
 class FArchive
 {

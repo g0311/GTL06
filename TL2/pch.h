@@ -40,6 +40,7 @@
 // Core Project Headers
 #include "VertexData.h"
 #include "UEContainer.h"
+#include "BoundingBox.h"
 #include "Struct.h"
 #include "Name.h"
 #include "Object.h"
