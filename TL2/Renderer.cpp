@@ -126,6 +126,11 @@ void URenderer::UpdateUVScroll(const FVector2D& Speed, float TimeSec)
 	RHIDevice->UpdateUVScrollConstantBuffers(Speed, TimeSec);
 }
 
+void URenderer::UpdateDecalConstantBuffer(const FMatrix& InverseDecalWorld)
+{
+    RHIDevice->UpdateDecalConstantBuffer(InverseDecalWorld);
+}
+
 void URenderer::DrawIndexedPrimitiveComponent(UStaticMesh* InMesh, D3D11_PRIMITIVE_TOPOLOGY InTopology, const TArray<FMaterialSlot>& InComponentMaterialSlots)
 {
 	UINT stride = 0;

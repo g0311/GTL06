@@ -327,25 +327,25 @@ public:
     }
 
     // 주어진 폴리곤을 하나의 평면으로 클리핑합니다.
-    static inline TArray<FVertexDynamic> ClipPolygonAgainstPlane(const TArray<FVertexDynamic>& InVertices, const FPlane& Plane)
+    static inline TArray<FNormalVertex> ClipPolygonAgainstPlane(const TArray<FNormalVertex>& InVertices, const FPlane& Plane)
     {
-        TArray<FVertexDynamic> OutVertices;
+        TArray<FNormalVertex> OutVertices;
         if (InVertices.empty())
         {
             return OutVertices;
         }
 
-        FVertexDynamic S = InVertices.back();
-        for (const FVertexDynamic& E : InVertices)
+        FNormalVertex S = InVertices.back();
+        for (const FNormalVertex& E : InVertices)
         {
             float DistS = FVector::Dot
             (
-                FVector(S.Position.X, S.Position.Y, S.Position.Z),
+                FVector(S.pos.X, S.pos.Y, S.pos.Z),
                 FVector(Plane.Normal.X, Plane.Normal.Y, Plane.Normal.Z)
             ) - Plane.Distance;
             float DistE = FVector::Dot
             (
-                FVector(E.Position.X, E.Position.Y, E.Position.Z),
+                FVector(E.pos.X, E.pos.Y, E.pos.Z),
                 FVector(Plane.Normal.X, Plane.Normal.Y, Plane.Normal.Z)
             ) - Plane.Distance;
 
@@ -358,29 +358,41 @@ public:
             else if (DistS <= 0 && DistE > 0)
             {
                 float t = DistS / (DistS - DistE);
-                FVertexDynamic I;
-                I.Position.X = S.Position.X + t * (E.Position.X - S.Position.X);
-                I.Position.Y = S.Position.Y + t * (E.Position.Y - S.Position.Y);
-                I.Position.Z = S.Position.Z + t * (E.Position.Z - S.Position.Z);
-                // 다른 속성들도 선형 보간 (예: 색상)
-                I.Color.X = S.Color.X + t * (E.Color.X - S.Color.X);
-                I.Color.Y = S.Color.Y + t * (E.Color.Y - S.Color.Y);
-                I.Color.Z = S.Color.Z + t * (E.Color.Z - S.Color.Z);
-                I.Color.W = S.Color.W + t * (E.Color.W - S.Color.W);
+                FNormalVertex I;
+                I.pos.X = S.pos.X + t * (E.pos.X - S.pos.X);
+                I.pos.Y = S.pos.Y + t * (E.pos.Y - S.pos.Y);
+                I.pos.Z = S.pos.Z + t * (E.pos.Z - S.pos.Z);
+                // 다른 속성들도 선형 보간 (예: 색상, UV, 노멀)
+                I.color.X = S.color.X + t * (E.color.X - S.color.X);
+                I.color.Y = S.color.Y + t * (E.color.Y - S.color.Y);
+                I.color.Z = S.color.Z + t * (E.color.Z - S.color.Z);
+                I.color.W = S.color.W + t * (E.color.W - S.color.W);
+                I.normal.X = S.normal.X + t * (E.normal.X - S.normal.X);
+                I.normal.Y = S.normal.Y + t * (E.normal.Y - S.normal.Y);
+                I.normal.Z = S.normal.Z + t * (E.normal.Z - S.normal.Z);
+                I.normal.Normalize();
+                I.tex.X = S.tex.X + t * (E.tex.X - S.tex.X);
+                I.tex.Y = S.tex.Y + t * (E.tex.Y - S.tex.Y);
                 OutVertices.Add(I);
             }
             // Case 3: S 외부, E 내부 -> 교차점 I와 E 출력
             else if (DistS > 0 && DistE <= 0)
             {
                 float t = DistS / (DistS - DistE);
-                FVertexDynamic I;
-                I.Position.X = S.Position.X + t * (E.Position.X - S.Position.X);
-                I.Position.Y = S.Position.Y + t * (E.Position.Y - S.Position.Y);
-                I.Position.Z = S.Position.Z + t * (E.Position.Z - S.Position.Z);
-                I.Color.X = S.Color.X + t * (E.Color.X - S.Color.X);
-                I.Color.Y = S.Color.Y + t * (E.Color.Y - S.Color.Y);
-                I.Color.Z = S.Color.Z + t * (E.Color.Z - S.Color.Z);
-                I.Color.W = S.Color.W + t * (E.Color.W - S.Color.W);
+                FNormalVertex I;
+                I.pos.X = S.pos.X + t * (E.pos.X - S.pos.X);
+                I.pos.Y = S.pos.Y + t * (E.pos.Y - S.pos.Y);
+                I.pos.Z = S.pos.Z + t * (E.pos.Z - S.pos.Z);
+                I.color.X = S.color.X + t * (E.color.X - S.color.X);
+                I.color.Y = S.color.Y + t * (E.color.Y - S.color.Y);
+                I.color.Z = S.color.Z + t * (E.color.Z - S.color.Z);
+                I.color.W = S.color.W + t * (E.color.W - S.color.W);
+                I.normal.X = S.normal.X + t * (E.normal.X - S.normal.X);
+                I.normal.Y = S.normal.Y + t * (E.normal.Y - S.normal.Y);
+                I.normal.Z = S.normal.Z + t * (E.normal.Z - S.normal.Z);
+                I.normal.Normalize();
+                I.tex.X = S.tex.X + t * (E.tex.X - S.tex.X);
+                I.tex.Y = S.tex.Y + t * (E.tex.Y - S.tex.Y);
                 OutVertices.Add(I);
                 OutVertices.Add(E);
             }
@@ -392,13 +404,13 @@ public:
     }
 
     // 하나의 삼각형을 OBB의 6개 평면으로 클리핑하고, 결과를 삼각형 팬으로 만들어 반환합니다.
-    static inline TArray<FVertexDynamic> ClipTriangle(
-        const FVertexDynamic& V0,
-        const FVertexDynamic& V1,
-        const FVertexDynamic& V2,
+    static inline TArray<FNormalVertex> ClipTriangle(
+        const FNormalVertex& V0,
+        const FNormalVertex& V1,
+        const FNormalVertex& V2,
         const FOBB& OBB)
     {
-        TArray<FVertexDynamic> ClippedVertices;
+        TArray<FNormalVertex> ClippedVertices;
         ClippedVertices.reserve(10); // 충분한 공간 예약
         ClippedVertices.Add(V0);
         ClippedVertices.Add(V1);
@@ -412,10 +424,10 @@ public:
         }
 
         // 최종 클리핑된 폴리곤을 삼각형 팬으로 분할
-        TArray<FVertexDynamic> TriangulatedFan;
+        TArray<FNormalVertex> TriangulatedFan;
         if (ClippedVertices.size() >= 3)
         {
-            FVertexDynamic FirstVertex = ClippedVertices[0];
+            FNormalVertex FirstVertex = ClippedVertices[0];
             for (size_t i = 1; i < ClippedVertices.size() - 1; ++i)
             {
                 TriangulatedFan.Add(FirstVertex);

@@ -49,6 +49,8 @@ public:
 
     void UpdateUVScroll(const FVector2D& Speed, float TimeSec);
 
+    void UpdateDecalConstantBuffer(const FMatrix& InverseDecalWorld);
+
     void DrawIndexedPrimitiveComponent(UTextRenderComponent* Comp, D3D11_PRIMITIVE_TOPOLOGY InTopology);
 
     // 빌보드용 

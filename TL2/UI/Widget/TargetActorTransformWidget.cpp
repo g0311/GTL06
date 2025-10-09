@@ -13,6 +13,7 @@
 #include "TextRenderComponent.h"
 #include "CameraComponent.h"
 #include "BillboardComponent.h"
+#include "DecalComponent.h"
 #include "SelectionManager.h"
 using namespace std;
 
@@ -68,6 +69,7 @@ namespace
 				TArray<FAddableComponentDescriptor> Result;
 				Result.push_back({ "Static Mesh Component", UStaticMeshComponent::StaticClass(), "Static mesh 렌더링용 컴포넌트" });
 				Result.push_back({ "Billboard Component", UBillboardComponent::StaticClass(), "빌보드 텍스쳐 표시" });
+				Result.push_back({ "Decal Component", UDecalComponent::StaticClass(), "프로젝션 데칼 생성" });
 				return Result;
 			}();
 		return Options;
@@ -135,7 +137,8 @@ namespace
 			{
 				const bool bUsesWorldAttachment =
 					SceneComp->IsA(UStaticMeshComponent::StaticClass()) ||
-					SceneComp->IsA(UBillboardComponent::StaticClass());   // ← BillBoard도 월드 기준
+					SceneComp->IsA(UBillboardComponent::StaticClass()) ||
+					SceneComp->IsA(UDecalComponent::StaticClass());   // ← BillBoard도 월드 기준
 
 				const EAttachmentRule AttachRule =
 					bUsesWorldAttachment ? EAttachmentRule::KeepWorld : EAttachmentRule::KeepRelative;

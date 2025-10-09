@@ -444,6 +444,9 @@
     <FxCompile Include="Billboard.hlsl">
       <Filter>2. Rendering\Shaders</Filter>
     </FxCompile>
+    <FxCompile Include="Decal.hlsl">
+      <Filter>2. Rendering\Shaders</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <!-- Core Engine Headers -->

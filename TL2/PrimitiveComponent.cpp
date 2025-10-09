@@ -168,7 +168,7 @@ void UPrimitiveComponent::AddAABBLines(URenderer* Renderer, const FVector4& Colo
     Renderer->AddLine(Corners[3], Corners[7], Color);
 }
 
-void UPrimitiveComponent::AddOrientedBoundingBoxLines(URenderer* Renderer, const FVector4& Color)
+void UPrimitiveComponent::AddOBBLines(URenderer* Renderer, const FVector4& Color)
 {
     if (!Renderer) return;
     

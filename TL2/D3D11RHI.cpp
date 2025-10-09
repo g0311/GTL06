@@ -116,6 +116,7 @@ void D3D11RHI::Release()
     if (BillboardCB) { BillboardCB->Release(); BillboardCB = nullptr; }
     if (PixelConstCB) { PixelConstCB->Release(); PixelConstCB = nullptr; }
     if (UVScrollCB) { UVScrollCB->Release(); UVScrollCB = nullptr; }
+    if (DecalCB) { DecalCB->Release(); DecalCB = nullptr; }
     if (ConstantBuffer) { ConstantBuffer->Release(); ConstantBuffer = nullptr; }
 
     // 상태 객체
@@ -610,6 +611,14 @@ void D3D11RHI::CreateConstantBuffer()
     uvScrollDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
     uvScrollDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
     Device->CreateBuffer(&uvScrollDesc, nullptr, &UVScrollCB);
+
+    D3D11_BUFFER_DESC decalDesc = {};
+    decalDesc.Usage = D3D11_USAGE_DYNAMIC;
+    decalDesc.ByteWidth = sizeof(FMatrix);
+    decalDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+    decalDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+    Device->CreateBuffer(&decalDesc, nullptr, &DecalCB);
+
     if (UVScrollCB)
     {
         D3D11_MAPPED_SUBRESOURCE mapped{};
@@ -635,6 +644,19 @@ void D3D11RHI::UpdateUVScrollConstantBuffers(const FVector2D& Speed, float TimeS
         memcpy(mapped.pData, &data, sizeof(data));
         DeviceContext->Unmap(UVScrollCB, 0);
         DeviceContext->PSSetConstantBuffers(5, 1, &UVScrollCB);
+    }
+}
+
+void D3D11RHI::UpdateDecalConstantBuffer(const FMatrix& InverseDecalWorld)
+{
+    if (!DecalCB) return;
+
+    D3D11_MAPPED_SUBRESOURCE mapped;
+    if (SUCCEEDED(DeviceContext->Map(DecalCB, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped)))
+    {
+        memcpy(mapped.pData, &InverseDecalWorld, sizeof(InverseDecalWorld));
+        DeviceContext->Unmap(DecalCB, 0);
+        DeviceContext->PSSetConstantBuffers(2, 1, &DecalCB);
     }
 }
 

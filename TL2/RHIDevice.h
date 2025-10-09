@@ -47,6 +47,7 @@ public:
     virtual void UpdateHighLightConstantBuffers(const uint32 InPicked, const FVector& InColor, const uint32 X, const uint32 Y, const uint32 Z, const uint32 Gizmo) = 0;
     virtual void UpdateColorConstantBuffers(const FVector4& InColor) = 0;
     virtual void UpdateUVScrollConstantBuffers(const FVector2D& Speed, float TimeSec) = 0;
+    virtual void UpdateDecalConstantBuffer(const FMatrix& InverseDecalWorld) = 0;
 
     // clear
     virtual void ClearBackBuffer() = 0;

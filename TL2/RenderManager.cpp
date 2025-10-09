@@ -622,7 +622,7 @@ void URenderManager::RenderBoundingBoxes()
                 Primitive->AddAABBLines(Renderer, AABBColor);
                 
                 // OBB (파란색 라인)
-                Primitive->AddOrientedBoundingBoxLines(Renderer, OBBColor);
+                Primitive->AddOBBLines(Renderer, OBBColor);
             }
         }
     }

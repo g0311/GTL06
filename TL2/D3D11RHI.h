@@ -2,6 +2,7 @@
 #include "RHIDevice.h"
 #include "ResourceManager.h"
 #include "VertexData.h"
+
 class D3D11RHI : public URHIDevice
 {
 public:
@@ -51,6 +52,7 @@ public:
     void UpdateHighLightConstantBuffers(const uint32 InPicked, const FVector& InColor, const uint32 X, const uint32 Y, const uint32 Z, const uint32 Gizmo) override;
     void UpdateColorConstantBuffers(const FVector4& InColor) override;
     void UpdateUVScrollConstantBuffers(const FVector2D& Speed, float TimeSec) override;
+    void UpdateDecalConstantBuffer(const FMatrix& InverseDecalWorld) override;
 
     void IASetPrimitiveTopology() override;
     void RSSetState(EViewModeIndex ViewModeIndex) override;
@@ -150,6 +152,7 @@ private:
     ID3D11Buffer* ColorCB{};
     ID3D11Buffer* PixelConstCB{};
     ID3D11Buffer* UVScrollCB{};
+    ID3D11Buffer* DecalCB{};
 
     ID3D11Buffer* ConstantBuffer{};
 
